@@ -1,70 +1,157 @@
-# Getting Started with Create React App
+# **Scene Graph Generator**
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A React-based application for generating and visualizing scene graphs using D3.js. This tool allows users to input prompts and dynamically render scene graphs with nodes, edges, and directional arrows, representing relationships between objects, attributes, and actions.
 
-## Available Scripts
+---
 
-In the project directory, you can run:
+## **Features**
 
-### `yarn start`
+- **Dynamic Scene Graph Generation**:
+  - Nodes are categorized into three types: `objects`, `attributes`, and `relationships`.
+  - Nodes are color-coded for better visual distinction:
+    - **Red**: Objects
+    - **Blue**: Attributes
+    - **Green**: Relationships
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- **Interactive Graph Visualization**:
+  - Drag nodes to reposition them dynamically.
+  - Force-directed layout ensures an aesthetically pleasing graph structure.
+  - Links (edges) between nodes are directional, with arrows representing relationships.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+- **Customizable Design**:
+  - Adjustable node size based on text length.
+  - Rounded node corners for a polished look.
+  - Clear and minimalistic arrow styles for better readability.
 
-### `yarn test`
+---
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## **Installation**
 
-### `yarn build`
+1. **Clone the Repository**:
+   ```bash
+   git clone https://github.com/your-repository/scene-graph-generator.git
+   cd scene-graph-generator
+   ```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+2. **Install Dependencies**:
+   If you are using Yarn:
+   ```bash
+   yarn install
+   ```
+   If you are using npm:
+   ```bash
+   npm install
+   ```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+3. **Start the Application**:
+   If you are using Yarn:
+   ```bash
+   yarn start
+   ```
+   If you are using npm:
+   ```bash
+   npm start
+   ```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+---
 
-### `yarn eject`
+## **Usage**
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+1. **Input Prompt**:
+   Enter a descriptive text in the input field to define the scene. For example:
+   ```
+   A brown cat sitting on a wooden bench holding an ice cream.
+   ```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+2. **Generate Scene Graph**:
+   Click the "Generate" button to create the scene graph.
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+3. **Interact with the Graph**:
+   - Drag nodes to explore the graph.
+   - Observe the relationships represented by directional arrows.
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+---
 
-## Learn More
+## **Technologies Used**
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+- **React.js**:
+  - For building the interactive user interface.
+- **D3.js**:
+  - For graph visualization and rendering force-directed layouts.
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+---
 
-### Code Splitting
+## **File Structure**
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+```plaintext
+src/
+├── components/
+│   └── SceneGraph.jsx   # Main component for rendering the graph
+├── App.js               # Root application component
+├── index.js             # Entry point of the application
+└── styles.css           # Global styles (if applicable)
+```
 
-### Analyzing the Bundle Size
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+## **Customization**
 
-### Making a Progressive Web App
+- **Node Colors**:
+  Modify the `fill` attribute in the `SceneGraph.jsx` file to change node colors:
+  ```javascript
+  .attr("fill", (d) =>
+    d.type === "object"
+      ? "#ff6b6b" // Red for objects
+      : d.type === "attribute"
+      ? "#4dabf7" // Blue for attributes
+      : "#51cf66" // Green for relationships
+  );
+  ```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+- **Force Layout Settings**:
+  Adjust the simulation forces to modify graph spacing:
+  ```javascript
+  .force("link", d3.forceLink().distance(150)) // Link distance
+  .force("charge", d3.forceManyBody().strength(-300)) // Node repulsion
+  ```
 
-### Advanced Configuration
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+## **Future Improvements**
 
-### Deployment
+- Add the ability to save and export graphs as images or JSON files.
+- Support for hierarchical layouts for more complex graphs.
+- Integration with AI models to automatically parse prompts into scene graphs.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+---
 
-### `yarn build` fails to minify
+## **Contributing**
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+Contributions are welcome! If you'd like to improve the project or add new features:
+
+1. Fork the repository.
+2. Create a new branch for your feature:
+   ```bash
+   git checkout -b feature-name
+   ```
+3. Commit and push your changes:
+   ```bash
+   git commit -m "Add your message here"
+   git push origin feature-name
+   ```
+4. Open a pull request.
+
+---
+
+## **License**
+
+This project is licensed under the MIT License. See the `LICENSE` file for more details.
+
+---
+
+## **Acknowledgments**
+
+- Built with ❤️ using **React** and **D3.js**.
+- Inspired by the need for intuitive scene graph visualization tools.
+
+Feel free to reach out if you have any questions or suggestions! 😊
