@@ -3,9 +3,25 @@ import SceneGraph from "./SceneGraph";
 import generateSceneGraph from "./action/generateSceneGraph"; // 비동기 함수 가져오기
 
 const App = () => {
-  const [graphData, setGraphData] = useState(null); // Scene Graph 데이터 상태
-  const [inputText, setInputText] = useState(""); // 사용자 입력 상태
+  const [graphData, setGraphData] = useState({
+    nodes: [
+      { id: "object1", name: "wolf", type: "object" },
+      { id: "object2", name: "chocolate icecream", type: "object" },
+      { id: "rel-0", name: "holding", type: "relationship" },
+    ],
+    links: [
+      { source: "object1", target: "rel-0", relation: "holding" },
+      { source: "rel-0", target: "object2", relation: "holding" },
+    ],
+  }); // Scene Graph 데이터 상태
+  const [inputText, setInputText] = useState("wolf holding chocolate icecream"); // 사용자 입력 상태
   const [loading, setLoading] = useState(false); // 로딩 상태 관리
+  const [currentMode, setCurrentMode] = useState("default"); // "default", "edit", "custom"
+
+  // 모드 변경 함수
+  const changeMode = (mode) => {
+    setCurrentMode(mode);
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -34,9 +50,24 @@ const App = () => {
           Generate
         </button>
       </form>
+      <div className="mode-selector">
+        <button onClick={() => changeMode("default")}>Default Mode</button>
+        <button onClick={() => changeMode("edit")}>Edit Mode</button>
+        <button onClick={() => changeMode("custom")}>Custom Mode</button>
+      </div>
+
+      {/* 현재 모드 표시 */}
+      <p style={{ fontWeight: "bold", marginTop: "20px" }}>
+        Current Mode: <span style={{ color: "blue" }}>{currentMode}</span>
+      </p>
+
       {loading && <p>Loading...</p>}
       {graphData ? (
-        <SceneGraph graphData={graphData} setGraphData={setGraphData}/>
+        <SceneGraph
+          graphData={graphData}
+          setGraphData={setGraphData}
+          currentMode={currentMode}
+        />
       ) : (
         <p>Enter a prompt to generate a scene graph.</p>
       )}
