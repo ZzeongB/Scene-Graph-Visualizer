@@ -1,8 +1,9 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import * as d3 from "d3";
 
 const SceneGraph = ({ graphData }) => {
   const svgRef = useRef();
+  const [highlightedEdge, setHighlightedEdge] = useState(null);
 
   useEffect(() => {
     if (!graphData || !graphData.nodes || !graphData.links) {
@@ -48,7 +49,7 @@ const SceneGraph = ({ graphData }) => {
           .id((d) => d.id)
           .distance(150) // 링크 거리 증가
       )
-      .force("charge", d3.forceManyBody().strength(-300)) // 반발력 줄임
+      .force("charge", d3.forceManyBody().strength(-300)); // 반발력 줄임
     //   .force("x", d3.forceX(width / 2).strength(0.1))
     //   .force("y", d3.forceY(height / 2).strength(0.1));
 
@@ -58,16 +59,29 @@ const SceneGraph = ({ graphData }) => {
       .append("marker")
       .attr("id", "arrowhead")
       .attr("viewBox", "0 -5 10 10")
-      .attr("refX", 9) // 화살표 끝점을 노드에서 더 띄움
+      .attr("refX", 9)
       .attr("refY", 0)
       .attr("orient", "auto")
-      .attr("markerWidth", 5) // 화살표 크기 조정
+      .attr("markerWidth", 5)
       .attr("markerHeight", 5)
       .append("path")
       .attr("d", "M 0,-5 L 10,0 L 0,5")
       .attr("fill", "#aaa");
 
-    // 링크 추가
+    svg
+      .append("defs")
+      .append("marker")
+      .attr("id", "arrowhead-highlighted")
+      .attr("viewBox", "0 -5 10 10")
+      .attr("refX", 9)
+      .attr("refY", 0)
+      .attr("orient", "auto")
+      .attr("markerWidth", 5)
+      .attr("markerHeight", 5)
+      .append("path")
+      .attr("d", "M 0,-5 L 10,0 L 0,5")
+      .attr("fill", "#555");
+
     const link = svg
       .append("g")
       .attr("class", "links")
@@ -76,9 +90,19 @@ const SceneGraph = ({ graphData }) => {
       .join("line")
       .attr("stroke", "#aaa")
       .attr("stroke-width", 2)
-      .attr("marker-end", "url(#arrowhead)");
+      .attr("marker-end", (d) =>
+        highlightedEdge === d
+          ? "url(#arrowhead-highlighted)"
+          : "url(#arrowhead)"
+      )
+      .attr("class", (d) =>
+        highlightedEdge === d ? "link highlighted" : "link"
+      )
+      .on("click", (event, d) => {
+        // 선택된 엣지 하이라이트
+        setHighlightedEdge(d);
+      });
 
-    // 노드 추가
     const nodeGroup = svg
       .append("g")
       .attr("class", "nodes")
@@ -104,7 +128,6 @@ const SceneGraph = ({ graphData }) => {
           })
       );
 
-    // 사각형 노드
     nodeGroup
       .append("rect")
       .attr("width", (d) => d.name.length * 10 + 20)
@@ -118,10 +141,9 @@ const SceneGraph = ({ graphData }) => {
           ? "#4dabf7"
           : "#51cf66"
       )
-      .attr("rx", 10) // 모서리 둥글게
+      .attr("rx", 10)
       .attr("ry", 10);
 
-    // 텍스트 노드
     nodeGroup
       .append("text")
       .attr("text-anchor", "middle")
@@ -130,7 +152,6 @@ const SceneGraph = ({ graphData }) => {
       .style("font-size", "12px")
       .text((d) => d.name);
 
-    // 엣지 길이 조정
     simulation.on("tick", () => {
       link
         .attr("x1", (d) => {
@@ -160,9 +181,23 @@ const SceneGraph = ({ graphData }) => {
 
       nodeGroup.attr("transform", (d) => `translate(${d.x}, ${d.y})`);
     });
-  }, [graphData]);
+  }, [graphData, highlightedEdge]);
 
-  return <svg ref={svgRef}></svg>;
+  return (
+    <div>
+      <svg ref={svgRef}></svg>
+      <style>{`
+        .link {
+          stroke: #aaa;
+          stroke-width: 2;
+        }
+        .link.highlighted {
+          stroke: #555;
+          stroke-width: 3;
+        }
+      `}</style>
+    </div>
+  );
 };
 
 export default SceneGraph;
