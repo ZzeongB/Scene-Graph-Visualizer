@@ -36,3 +36,11 @@
     transform: rotate(360deg);
   }
 }
+line {
+  stroke: #aaa;
+  stroke-width: 2;
+}
+
+marker path {
+  fill: #aaa;
+}
