@@ -45,10 +45,12 @@ const generateSceneGraph = async (prompt) => {
 
     if (response.ok) {
       const sceneGraph = JSON.parse(data.choices[0].message.content);
-      console.log("Scene Graph (Raw):", sceneGraph);
+      // console.log("Scene Graph (Raw):", sceneGraph);
 
       // 변환된 데이터로 그래프 구성
       const transformedGraph = transformGraphData(sceneGraph);
+
+      console.log("Scene Graph (Transformed):", transformedGraph);
       return transformedGraph;
     } else {
       console.error("Error:", data);

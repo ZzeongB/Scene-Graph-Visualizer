@@ -1,9 +1,10 @@
 import React, { useRef, useEffect, useState } from "react";
 import * as d3 from "d3";
 
-const SceneGraph = ({ graphData }) => {
+const SceneGraph = ({ graphData, setGraphData }) => {
   const svgRef = useRef();
-  const [highlightedEdge, setHighlightedEdge] = useState(null);
+  const [tempEdge, setTempEdge] = useState(null); // Temporary edge while dragging
+  const draggingNodeRef = useRef(null); // Use a ref to track draggingNode synchronously
 
   useEffect(() => {
     if (!graphData || !graphData.nodes || !graphData.links) {
@@ -25,10 +26,10 @@ const SceneGraph = ({ graphData }) => {
         const objectIndex = objectNodes.findIndex(
           (objNode) => objNode.id === node.id
         );
-        node.fx = width / 2 - (objectNodes.length - 1) * 75 + objectIndex * 150; // x 좌표: object 노드 중심 정렬
-        node.fy = height / 2; // y 좌표: 화면 중앙
+        node.fx = width / 2 - (objectNodes.length - 1) * 75 + objectIndex * 150;
+        node.fy = height / 2;
       } else {
-        node.fx = null; // 다른 노드는 움직일 수 있도록 초기화
+        node.fx = null;
         node.fy = null;
       }
     });
@@ -38,8 +39,7 @@ const SceneGraph = ({ graphData }) => {
       .attr("width", width)
       .attr("height", height);
 
-    svg.selectAll("*").remove();
-
+    svg.selectAll("*").remove(); // Clear previous render
     const simulation = d3
       .forceSimulation(graphData.nodes)
       .force(
@@ -49,39 +49,8 @@ const SceneGraph = ({ graphData }) => {
           .id((d) => d.id)
           .distance(150) // 링크 거리 증가
       )
-      .force("charge", d3.forceManyBody().strength(-300)); // 반발력 줄임
-    //   .force("x", d3.forceX(width / 2).strength(0.1))
-    //   .force("y", d3.forceY(height / 2).strength(0.1));
-
-    // 화살표 끝점 띄우기
-    svg
-      .append("defs")
-      .append("marker")
-      .attr("id", "arrowhead")
-      .attr("viewBox", "0 -5 10 10")
-      .attr("refX", 9)
-      .attr("refY", 0)
-      .attr("orient", "auto")
-      .attr("markerWidth", 5)
-      .attr("markerHeight", 5)
-      .append("path")
-      .attr("d", "M 0,-5 L 10,0 L 0,5")
-      .attr("fill", "#aaa");
-
-    svg
-      .append("defs")
-      .append("marker")
-      .attr("id", "arrowhead-highlighted")
-      .attr("viewBox", "0 -5 10 10")
-      .attr("refX", 9)
-      .attr("refY", 0)
-      .attr("orient", "auto")
-      .attr("markerWidth", 5)
-      .attr("markerHeight", 5)
-      .append("path")
-      .attr("d", "M 0,-5 L 10,0 L 0,5")
-      .attr("fill", "#555");
-
+      .force("charge", d3.forceManyBody().strength(-300));
+    // Draw edges
     const link = svg
       .append("g")
       .attr("class", "links")
@@ -90,44 +59,41 @@ const SceneGraph = ({ graphData }) => {
       .join("line")
       .attr("stroke", "#aaa")
       .attr("stroke-width", 2)
-      .attr("marker-end", (d) =>
-        highlightedEdge === d
-          ? "url(#arrowhead-highlighted)"
-          : "url(#arrowhead)"
-      )
-      .attr("class", (d) =>
-        highlightedEdge === d ? "link highlighted" : "link"
-      )
-      .on("click", (event, d) => {
-        // 선택된 엣지 하이라이트
-        setHighlightedEdge(d);
+      .attr("marker-end", "url(#arrowhead)")
+      .on("contextmenu", (event, d) => { // 'd'는 해당 Edge 데이터
+        console.log("Delete link", d);
+        event.preventDefault(); // 기본 컨텍스트 메뉴 방지
+    
+        // React 상태에서 해당 Edge 삭제
+        setGraphData((prevData) => ({
+          ...prevData,
+          links: prevData.links.filter((link) => link !== d), // 선택된 Edge 삭제
+        }));
       });
 
+    // Draw temporary edge (if any)
+    if (tempEdge && tempEdge.source && tempEdge.target) {
+      svg
+        .append("line")
+        .attr("class", "temp-line")
+        .attr("x1", tempEdge?.source?.x ?? 0) // 값이 없으면 0을 기본값으로 사용
+        .attr("y1", tempEdge?.source?.y ?? 0)
+        .attr("x2", tempEdge?.target?.x ?? 0)
+        .attr("y2", tempEdge?.target?.y ?? 0)
+
+        .attr("stroke", "gray")
+        .attr("stroke-dasharray", "4");
+    }
+
+    // Draw nodes
     const nodeGroup = svg
       .append("g")
       .attr("class", "nodes")
       .selectAll("g")
       .data(graphData.nodes)
-      .join("g")
-      .call(
-        d3
-          .drag()
-          .on("start", (event, d) => {
-            if (!event.active) simulation.alphaTarget(0.3).restart();
-            d.fx = d.x;
-            d.fy = d.y;
-          })
-          .on("drag", (event, d) => {
-            d.fx = event.x;
-            d.fy = event.y;
-          })
-          .on("end", (event, d) => {
-            if (!event.active) simulation.alphaTarget(0);
-            d.fx = null;
-            d.fy = null;
-          })
-      );
+      .join("g");
 
+    // Add rectangles to nodes
     nodeGroup
       .append("rect")
       .attr("width", (d) => d.name.length * 10 + 20)
@@ -142,8 +108,92 @@ const SceneGraph = ({ graphData }) => {
           : "#51cf66"
       )
       .attr("rx", 10)
-      .attr("ry", 10);
+      .attr("ry", 10)
+      .call(
+        d3
+          .drag()
+          .on("start", (event, node) => {
+            draggingNodeRef.current = node; // 드래그 시작 시 노드 저장
+            setTempEdge({ source: node, target: { x: node.x, y: node.y } }); // tempEdge 초기화
+          })
+          .on("drag", (event) => {
+            if (draggingNodeRef.current) {
+              const svg = d3.select(svgRef.current);
+              const point = svg.node().createSVGPoint();
+              point.x = event.sourceEvent.clientX; // 마우스 스크린 좌표
+              point.y = event.sourceEvent.clientY; // 마우스 스크린 좌표
 
+              // 스크린 좌표를 SVG 좌표로 변환
+              const transformedPoint = point.matrixTransform(
+                svg.node().getScreenCTM().inverse()
+              );
+
+              // tempEdge 업데이트
+              setTempEdge({
+                source: draggingNodeRef.current,
+                target: { x: transformedPoint.x, y: transformedPoint.y },
+              });
+            }
+          })
+          .on("end", (event) => {
+            if (draggingNodeRef.current) {
+              // 연결할 노드 찾기
+              const svg = d3.select(svgRef.current);
+              const point = svg.node().createSVGPoint();
+              point.x = event.sourceEvent.clientX; // 스크린 좌표
+              point.y = event.sourceEvent.clientY; // 스크린 좌표
+          
+              // 스크린 좌표를 SVG 로컬 좌표로 변환
+              const transformedPoint = point.matrixTransform(
+                svg.node().getScreenCTM().inverse()
+              );
+          
+              const targetNode = graphData.nodes.find(
+                (n) =>
+                  Math.hypot(n.x - transformedPoint.x, n.y - transformedPoint.y) < 30
+              );
+          
+              console.log("end graphData", graphData);
+              console.log("end", draggingNodeRef.current, targetNode);
+          
+              if (targetNode && targetNode !== draggingNodeRef.current) {
+                // 새 엣지 추가
+                const newEdge = {
+                  source: draggingNodeRef.current,
+                  target: targetNode,
+                };
+          
+                console.log("newEdge", newEdge);
+          
+                // React 상태로 링크 업데이트
+                setGraphData((prevData) => ({
+                  ...prevData,
+                  links: [...prevData.links, newEdge],
+                }));
+              }
+          
+              // tempEdge 초기화
+              setTempEdge(null);
+              draggingNodeRef.current = null;
+            }
+          })          
+      )
+      .on("contextmenu", (event, node) => {
+        console.log("Delete node", node);
+        event.preventDefault(); // Prevent default context menu
+      
+        // React 상태로 노드와 연결된 링크 삭제
+        setGraphData((prevData) => ({
+          ...prevData,
+          nodes: prevData.nodes.filter((n) => n !== node),
+          links: prevData.links.filter(
+            (link) => link.source !== node && link.target !== node
+          ),
+        }));
+      });
+      
+
+    // Add text to nodes
     nodeGroup
       .append("text")
       .attr("text-anchor", "middle")
@@ -155,33 +205,36 @@ const SceneGraph = ({ graphData }) => {
     simulation.on("tick", () => {
       link
         .attr("x1", (d) => {
-          const dx = d.target.x - d.source.x;
-          const dy = d.target.y - d.source.y;
-          const distance = Math.sqrt(dx * dx + dy * dy);
-          return d.source.x + (dx / distance) * 20; // 20px 띄움
+          const dx = (d.target?.x ?? 0) - (d.source?.x ?? 0);
+          const dy = (d.target?.y ?? 0) - (d.source?.y ?? 0);
+          const distance = Math.sqrt(dx * dx + dy * dy) || 1; // 0 방지
+          return (d.source?.x ?? 0) + (dx / distance) * 20; // 20px 띄움
         })
         .attr("y1", (d) => {
-          const dx = d.target.x - d.source.x;
-          const dy = d.target.y - d.source.y;
-          const distance = Math.sqrt(dx * dx + dy * dy);
-          return d.source.y + (dy / distance) * 20; // 20px 띄움
+          const dx = (d.target?.x ?? 0) - (d.source?.x ?? 0);
+          const dy = (d.target?.y ?? 0) - (d.source?.y ?? 0);
+          const distance = Math.sqrt(dx * dx + dy * dy) || 1; // 0 방지
+          return (d.source?.y ?? 0) + (dy / distance) * 20; // 20px 띄움
         })
         .attr("x2", (d) => {
-          const dx = d.target.x - d.source.x;
-          const dy = d.target.y - d.source.y;
-          const distance = Math.sqrt(dx * dx + dy * dy);
-          return d.target.x - (dx / distance) * 20; // 20px 띄움
+          const dx = (d.target?.x ?? 0) - (d.source?.x ?? 0);
+          const dy = (d.target?.y ?? 0) - (d.source?.y ?? 0);
+          const distance = Math.sqrt(dx * dx + dy * dy) || 1; // 0 방지
+          return (d.target?.x ?? 0) - (dx / distance) * 20; // 20px 띄움
         })
         .attr("y2", (d) => {
-          const dx = d.target.x - d.source.x;
-          const dy = d.target.y - d.source.y;
-          const distance = Math.sqrt(dx * dx + dy * dy);
-          return d.target.y - (dy / distance) * 20; // 20px 띄움
+          const dx = (d.target?.x ?? 0) - (d.source?.x ?? 0);
+          const dy = (d.target?.y ?? 0) - (d.source?.y ?? 0);
+          const distance = Math.sqrt(dx * dx + dy * dy) || 1; // 0 방지
+          return (d.target?.y ?? 0) - (dy / distance) * 20; // 20px 띄움
         });
 
       nodeGroup.attr("transform", (d) => `translate(${d.x}, ${d.y})`);
     });
-  }, [graphData, highlightedEdge]);
+
+    // Function to re-render graph
+   
+  }, [tempEdge, graphData, setGraphData]);
 
   return (
     <div>
@@ -190,10 +243,6 @@ const SceneGraph = ({ graphData }) => {
         .link {
           stroke: #aaa;
           stroke-width: 2;
-        }
-        .link.highlighted {
-          stroke: #555;
-          stroke-width: 3;
         }
       `}</style>
     </div>

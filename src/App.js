@@ -36,7 +36,7 @@ const App = () => {
       </form>
       {loading && <p>Loading...</p>}
       {graphData ? (
-        <SceneGraph graphData={graphData} />
+        <SceneGraph graphData={graphData} setGraphData={setGraphData}/>
       ) : (
         <p>Enter a prompt to generate a scene graph.</p>
       )}
