@@ -1,7 +1,14 @@
 import React, { useRef, useEffect, useState } from "react";
 import * as d3 from "d3";
+import generateUpdatedTextUsingAPI from "./action/generateUpdatedText";
 
-const SceneGraph = ({ graphData, setGraphData, currentMode }) => {
+const SceneGraph = ({
+  graphData,
+  setGraphData,
+  currentMode,
+  inputText,
+  setInputText,
+}) => {
   const svgRef = useRef();
   const [tempEdge, setTempEdge] = useState(null); // Temporary edge while dragging
   const draggingNodeRef = useRef(null); // Use a ref to track draggingNode synchronously
@@ -288,46 +295,45 @@ const SceneGraph = ({ graphData, setGraphData, currentMode }) => {
 
     // Add node on canvas click in edit mode
     // Add node on canvas click in edit mode
-svg.on("click", (event) => {
-  console.log("SVG Clicked", event);
-  if (currentMode === "edit") {
-    const svgElement = svgRef.current;
-    const point = svgElement.createSVGPoint();
-    point.x = event.clientX; // 마우스 스크린 X 좌표
-    point.y = event.clientY; // 마우스 스크린 Y 좌표
+    svg.on("click", (event) => {
+      console.log("SVG Clicked", event);
+      if (currentMode === "edit") {
+        const svgElement = svgRef.current;
+        const point = svgElement.createSVGPoint();
+        point.x = event.clientX; // 마우스 스크린 X 좌표
+        point.y = event.clientY; // 마우스 스크린 Y 좌표
 
-    // 스크린 좌표를 SVG 좌표로 변환
-    const transformedPoint = point.matrixTransform(
-      svgElement.getScreenCTM().inverse()
-    );
+        // 스크린 좌표를 SVG 좌표로 변환
+        const transformedPoint = point.matrixTransform(
+          svgElement.getScreenCTM().inverse()
+        );
 
-    setInputPosition({ x: transformedPoint.x, y: transformedPoint.y }); // 정확한 SVG 좌표로 입력창 위치 설정
-  }
-});
-
+        setInputPosition({ x: transformedPoint.x, y: transformedPoint.y }); // 정확한 SVG 좌표로 입력창 위치 설정
+      }
+    });
 
     // Function to re-render graph
   }, [tempEdge, graphData, setGraphData, currentMode]);
- // Handle input submit
- const handleInputSubmit = (event) => {
-  event.preventDefault();
-  if (inputValue.trim()) {
-    const newNode = {
-      id: `node-${Date.now()}`, // Unique ID
-      name: inputValue.trim(), // User-provided name
-      type: selectedType, // User-selected type
-      x: inputPosition.x,
-      y: inputPosition.y,
-    };
-    setGraphData((prevData) => ({
-      ...prevData,
-      nodes: [...prevData.nodes, newNode], // Add new node
-    }));
-    setInputValue(""); // Reset input
-    setSelectedType("object"); // Reset type
-    setInputPosition(null); // Hide input
-  }
-};
+  // Handle input submit
+  const handleInputSubmit = (event) => {
+    event.preventDefault();
+    if (inputValue.trim()) {
+      const newNode = {
+        id: `node-${Date.now()}`, // Unique ID
+        name: inputValue.trim(), // User-provided name
+        type: selectedType, // User-selected type
+        x: inputPosition.x,
+        y: inputPosition.y,
+      };
+      setGraphData((prevData) => ({
+        ...prevData,
+        nodes: [...prevData.nodes, newNode], // Add new node
+      }));
+      setInputValue(""); // Reset input
+      setSelectedType("object"); // Reset type
+      setInputPosition(null); // Hide input
+    }
+  };
   return (
     <div>
       <svg ref={svgRef}></svg>

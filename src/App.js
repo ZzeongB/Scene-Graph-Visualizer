@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import SceneGraph from "./SceneGraph";
-import generateSceneGraph from "./action/generateSceneGraph"; // 비동기 함수 가져오기
+import generateSceneGraph from "./action/generateSceneGraph"; // 씬 그래프 생성 함수
+import generateUpdatedTextUsingAPI from "./action/generateUpdatedText";
 
 const App = () => {
   const [graphData, setGraphData] = useState({
@@ -13,7 +14,7 @@ const App = () => {
       { source: "object1", target: "rel-0", relation: "holding" },
       { source: "rel-0", target: "object2", relation: "holding" },
     ],
-  }); // Scene Graph 데이터 상태
+  }); // 씬 그래프 데이터 상태
   const [inputText, setInputText] = useState("wolf holding chocolate icecream"); // 사용자 입력 상태
   const [loading, setLoading] = useState(false); // 로딩 상태 관리
   const [currentMode, setCurrentMode] = useState("default"); // "default", "edit", "custom"
@@ -23,14 +24,30 @@ const App = () => {
     setCurrentMode(mode);
   };
 
-  const handleSubmit = async (event) => {
+  // 씬 그래프 생성 함수
+  const handleGenerateSceneGraph = async (event) => {
     event.preventDefault();
     setLoading(true); // 로딩 시작
     try {
-      const data = await generateSceneGraph(inputText); // 비동기 함수 호출
-      setGraphData(data); // 데이터를 상태에 저장
+      const data = await generateSceneGraph(inputText); // 씬 그래프 생성
+      setGraphData(data); // 생성된 그래프 데이터 설정
     } catch (error) {
       console.error("Error generating scene graph:", error);
+    }
+    setLoading(false); // 로딩 종료
+  };
+
+  // 씬 그래프를 텍스트로 변환하는 함수
+  const handleGenerateTextFromSceneGraph = async () => {
+    setLoading(true); // 로딩 시작
+    try {
+      // API를 호출하여 새로운 텍스트 생성
+      const newText = await generateUpdatedTextUsingAPI(graphData, inputText);
+
+      console.log("Updated Text in SceneGraph.js:", newText);
+      setInputText(newText); // 새로 생성된 텍스트 업데이트
+    } catch (error) {
+      console.error("Error generating updated text:", error);
     }
     setLoading(false); // 로딩 종료
   };
@@ -38,7 +55,7 @@ const App = () => {
   return (
     <div style={{ padding: "20px" }}>
       <h1>Scene Graph Generator</h1>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleGenerateSceneGraph}>
         <input
           type="text"
           value={inputText}
@@ -48,6 +65,12 @@ const App = () => {
         />
         <button type="submit" style={{ padding: "10px" }}>
           Generate
+        </button>
+        <button
+          onClick={handleGenerateTextFromSceneGraph}
+          style={{ padding: "10px", marginTop: "20px" }}
+        >
+          Convert Scene Graph to Text
         </button>
       </form>
       <div className="mode-selector">
@@ -67,6 +90,8 @@ const App = () => {
           graphData={graphData}
           setGraphData={setGraphData}
           currentMode={currentMode}
+          inputText={inputText}
+          setInputText={setInputText}
         />
       ) : (
         <p>Enter a prompt to generate a scene graph.</p>
