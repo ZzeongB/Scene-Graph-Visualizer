@@ -3,13 +3,13 @@ const generateUpdatedTextUsingAPI = async (sceneGraph, beforeText) => {
   const endpoint = "https://api.openai.com/v1/chat/completions";
 
   const prompt = `
-    Here is a scene description and a scene graph update. Your task is to generate a new scene description that incorporates the updates in the scene graph while preserving the style and structure of the original description.
+    Here is a prompt and a scene graph update. Your task is to generate a new prompt that incorporates the updates in the scene graph.
 
     ### Example
-    Original description:
+    Original prompt:
     "A cat is sitting on a wooden table."
 
-    Scene graph update:
+    Updated scene graph:
     {
       "objects": [
         { "id": "object1", "name": "cat", "attributes": ["sitting", "white"] },
@@ -25,14 +25,19 @@ const generateUpdatedTextUsingAPI = async (sceneGraph, beforeText) => {
     Updated description:
     "A white cat is sitting on a wooden table, and there is a red bowl on the table."
 
+    There are following rules:
+    1. The updated prompt should NEVER have other objects or attributes or relationships that are NOT IN THE SCENE GRAPH.
+    2. The original description should be preserved as much as possible.
+    3. You should avoid repeating the same information.
+
     ### Your task
-    Original description:
+    Original prompt:
     "${beforeText}"
 
     Scene graph update:
     ${JSON.stringify(sceneGraph, null, 2)}
 
-    Please provide the updated scene description:
+    Please provide the updated scene prompt:
   `;
 
   try {
@@ -43,7 +48,7 @@ const generateUpdatedTextUsingAPI = async (sceneGraph, beforeText) => {
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "gpt-4",
+        model: "gpt-4o-mini",
         messages: [
           {
             role: "user",
@@ -70,7 +75,6 @@ const generateUpdatedTextUsingAPI = async (sceneGraph, beforeText) => {
     }
   } catch (error) {
     console.error("Error fetching from OpenAI:", error);
-    alert("An error occurred while generating the updated text.");
     return beforeText; // 에러 시 기존 텍스트 반환
   }
 };

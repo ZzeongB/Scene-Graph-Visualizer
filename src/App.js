@@ -4,15 +4,30 @@ import generateSceneGraph from "./action/generateSceneGraph"; // 씬 그래프 �
 import generateUpdatedTextUsingAPI from "./action/generateUpdatedText";
 
 const App = () => {
-  const [graphData, setGraphData] = useState({
+  const [sceneGraph, setSceneGraph] = useState({ // sceneGraph is in the form of a JSON object, with {"objects":["attributes"], "relationships"}
+    objects: [
+      { id: "object1", name: "wolf" },
+      { id: "object2", name: "icecream", attributes: ["chocolate"] },
+    ],
+    relationships: [
+      { source: "object1", target: "object2", relation: "holding" },
+    ],
+  }); 
+  const [graphData, setGraphData] = useState({ // graphData is in the form of a JSON object, with {"nodes", "links"}, to be easily used by the SceneGraph component
     nodes: [
       { id: "object1", name: "wolf", type: "object" },
       { id: "object2", name: "chocolate icecream", type: "object" },
+      { id: "object2-chocolate", name: "chocolate", type: "attribute" },
       { id: "rel-0", name: "holding", type: "relationship" },
     ],
     links: [
       { source: "object1", target: "rel-0", relation: "holding" },
       { source: "rel-0", target: "object2", relation: "holding" },
+      {
+        source: "object2",
+        target: "object2-chocolate",
+        relation: "has attribute",
+      },
     ],
   }); // 씬 그래프 데이터 상태
   const [inputText, setInputText] = useState("wolf holding chocolate icecream"); // 사용자 입력 상태
@@ -30,7 +45,9 @@ const App = () => {
     setLoading(true); // 로딩 시작
     try {
       const data = await generateSceneGraph(inputText); // 씬 그래프 생성
-      setGraphData(data); // 생성된 그래프 데이터 설정
+      const { sceneGraph, nodes, links} = data;
+      setSceneGraph(sceneGraph); // 생성된 씬 그래프 설정
+      setGraphData({nodes, links}); // 생성된 그래프 데이터 설정
     } catch (error) {
       console.error("Error generating scene graph:", error);
     }
@@ -44,7 +61,7 @@ const App = () => {
       // API를 호출하여 새로운 텍스트 생성
       const newText = await generateUpdatedTextUsingAPI(graphData, inputText);
 
-      console.log("Updated Text in SceneGraph.js:", newText);
+      console.log("Updated Text in App.js:", newText);
       setInputText(newText); // 새로 생성된 텍스트 업데이트
     } catch (error) {
       console.error("Error generating updated text:", error);
@@ -55,7 +72,7 @@ const App = () => {
   return (
     <div style={{ padding: "20px" }}>
       <h1>Scene Graph Generator</h1>
-      <form onSubmit={handleGenerateSceneGraph}>
+      <form>
         <input
           type="text"
           value={inputText}
@@ -63,16 +80,21 @@ const App = () => {
           placeholder="Enter a text prompt"
           style={{ width: "400px", padding: "10px", marginRight: "10px" }}
         />
-        <button type="submit" style={{ padding: "10px" }}>
-          Generate
-        </button>
-        <button
-          onClick={handleGenerateTextFromSceneGraph}
-          style={{ padding: "10px", marginTop: "20px" }}
-        >
-          Convert Scene Graph to Text
-        </button>
       </form>
+
+      <button
+        type="submit"
+        style={{ padding: "10px" }}
+        onClick={handleGenerateSceneGraph}
+      >
+        Generate
+      </button>
+      <button
+        onClick={handleGenerateTextFromSceneGraph}
+        style={{ padding: "10px", marginTop: "20px" }}
+      >
+        Convert Scene Graph to Text
+      </button>
       <div className="mode-selector">
         <button onClick={() => changeMode("default")}>Default Mode</button>
         <button onClick={() => changeMode("edit")}>Edit Mode</button>

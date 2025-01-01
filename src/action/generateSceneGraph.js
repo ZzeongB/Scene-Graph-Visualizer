@@ -8,6 +8,7 @@ const generateSceneGraph = async (prompt) => {
     1. Objects (relevant entities in the scene).
     2. Object attributes (such as color, size, position).
     3. Object relationships (e.g., on, under, next to).
+
     Example Output:
     {
       "objects": [
@@ -18,6 +19,26 @@ const generateSceneGraph = async (prompt) => {
         { "source": "object1", "target": "object2", "relation": "on" }
       ]
     }
+
+    There are following rules.
+    1. Relationships are represented as an array of objects with source, target, and relation.
+    2. Each word in the prompt must be classified as ONLY ONE of the following: object, attribute, or relationship. NO DUPLICATES.
+
+    For example, for the given prompt "wolf holding chocolate icecream with strawberry on top",
+    the scene graph would be:
+    {
+      "objects": [
+        { "id": "object1", "name": "wolf" }
+        { "id": "object2", "name": "icecream", "attributes": ["chocolate"] },
+        { "id": "object3", "name": "strawberry" }
+      ],
+      "relationships": [
+        { "source": "object3", "target": "object2", "relation": "on top" }
+        { "source": "object1", "target": "object2", "relation": "holding" }
+      ]
+    }
+
+
     Use the prompt: "${prompt}".
     `;
 
@@ -29,7 +50,7 @@ const generateSceneGraph = async (prompt) => {
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "gpt-4", // GPT 모델
+        model: "gpt-4o-mini", // GPT 모델
         messages: [
           {
             role: "user",
@@ -111,7 +132,7 @@ const transformGraphData = (sceneGraph) => {
     ),
   ];
 
-  return { nodes, links };
+  return { sceneGraph, nodes, links };
 };
 
 export default generateSceneGraph;

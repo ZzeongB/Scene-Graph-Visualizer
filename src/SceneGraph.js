@@ -1,6 +1,5 @@
 import React, { useRef, useEffect, useState } from "react";
 import * as d3 from "d3";
-import generateUpdatedTextUsingAPI from "./action/generateUpdatedText";
 
 const SceneGraph = ({
   graphData,
@@ -15,6 +14,10 @@ const SceneGraph = ({
   const [inputPosition, setInputPosition] = useState(null); // 입력창 위치
   const [inputValue, setInputValue] = useState(""); // 사용자 입력 값
   const [selectedType, setSelectedType] = useState("object"); // 기본 타입 설정
+
+  // useEffect(() => {
+  //   console.log("graphData", graphData);
+  // }, [graphData]);
 
   useEffect(() => {
     if (!graphData || !graphData.nodes || !graphData.links) {
@@ -259,6 +262,8 @@ const SceneGraph = ({
           }));
         });
     }
+
+    // Update node and edge positions
     simulation.on("tick", () => {
       link
         .attr("x1", (d) => {
@@ -314,6 +319,7 @@ const SceneGraph = ({
 
     // Function to re-render graph
   }, [tempEdge, graphData, setGraphData, currentMode]);
+
   // Handle input submit
   const handleInputSubmit = (event) => {
     event.preventDefault();
@@ -334,6 +340,7 @@ const SceneGraph = ({
       setInputPosition(null); // Hide input
     }
   };
+
   return (
     <div>
       <svg ref={svgRef}></svg>
