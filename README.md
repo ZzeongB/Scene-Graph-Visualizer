@@ -43,6 +43,12 @@ A React-based application for generating and visualizing scene graphs using D3.j
    npm install
    ```
 
+  To generate image, you should install dependencies for the model:
+  ```bash
+  cd LAION-SG
+  pip install -r requirements.txt
+  ```
+
 3. **Start the Application**:
    If you are using Yarn:
    ```bash
@@ -53,6 +59,13 @@ A React-based application for generating and visualizing scene graphs using D3.j
    npm start
    ```
 
+  For the server, open a new terminal and run the following:
+  *Warning: GPU should be available*
+  *Server uses port 5000*
+  ```bash
+  cd LAION-SG
+  python server.py
+  ```
 ---
 
 ## **Usage**

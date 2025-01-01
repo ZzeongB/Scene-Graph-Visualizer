@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import SceneGraph from "./SceneGraph";
 import generateSceneGraph from "./action/generateSceneGraph"; // 씬 그래프 생성 함수
 import generateUpdatedTextUsingAPI from "./action/generateUpdatedText";
+import generateImage from "./action/generateImage";
 
 const App = () => {
   const [sceneGraph, setSceneGraph] = useState({
@@ -32,10 +33,16 @@ const App = () => {
       },
     ],
   }); // 씬 그래프 데이터 상태
+  const [image, setImage] = useState(null);
+
   const [inputText, setInputText] = useState("wolf holding chocolate icecream"); // 사용자 입력 상태
   const [loading, setLoading] = useState(false); // 로딩 상태 관리
   const [currentMode, setCurrentMode] = useState("default"); // "default", "edit", "custom"
 
+  useEffect(() => {
+    // 초기 로딩 시 씬 그래프 생성
+    console.log("image generated", image);
+  }, [image]);
   // 모드 변경 함수
   const changeMode = (mode) => {
     setCurrentMode(mode);
@@ -71,32 +78,53 @@ const App = () => {
     setLoading(false); // 로딩 종료
   };
 
+  const handleGenerateImageSubmit = async () => {
+    setLoading(true); // 로딩 시작
+    try {
+      const result = await generateImage(sceneGraph);
+
+      setImage(result["image"]);
+      console.log("Image generated successfully");
+    } catch (error) {
+      console.error("Error generating image:", error);
+    }
+    setLoading(false); // 로딩 종료
+  };
+
   return (
     <div style={{ padding: "20px" }}>
       <h1>Scene Graph Generator</h1>
-      <form>
-        <input
-          type="text"
-          value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
-          placeholder="Enter a text prompt"
-          style={{ width: "400px", padding: "10px", marginRight: "10px" }}
-        />
-      </form>
+      <div
+        className="input-container"
+        style={{ display: "flex", flexDirection: "row" }}
+      >
+        <form>
+          <input
+            type="text"
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            placeholder="Enter a text prompt"
+            style={{ width: "400px", padding: "10px", marginRight: "10px" }}
+          />
+        </form>
+        <button
+          type="submit"
+          style={{ padding: "10px" }}
+          onClick={handleGenerateSceneGraph}
+        >
+          Generate
+        </button>
+        <button
+          onClick={handleGenerateTextFromSceneGraph}
+          style={{ padding: "10px" }}
+        >
+          Convert Scene Graph to Text
+        </button>
+        <button onClick={handleGenerateImageSubmit} style={{ padding: "10px" }}>
+          GenerateImage
+        </button>
+      </div>
 
-      <button
-        type="submit"
-        style={{ padding: "10px" }}
-        onClick={handleGenerateSceneGraph}
-      >
-        Generate
-      </button>
-      <button
-        onClick={handleGenerateTextFromSceneGraph}
-        style={{ padding: "10px", marginTop: "20px" }}
-      >
-        Convert Scene Graph to Text
-      </button>
       <div className="mode-selector">
         <button onClick={() => changeMode("default")}>Default</button>
         <button onClick={() => changeMode("draw")}>Draw</button>
@@ -110,6 +138,7 @@ const App = () => {
       </p>
 
       {loading && <p>Loading...</p>}
+      <div style={{ display: "flex", flexDirection: "row" }}>
       {graphData ? (
         <SceneGraph
           graphData={graphData}
@@ -121,6 +150,15 @@ const App = () => {
       ) : (
         <p>Enter a prompt to generate a scene graph.</p>
       )}
+
+      <div>
+        {image && (
+          <img src={`data:image/png;base64,${image}`} alt="Generated" />
+        )}
+        {!image && <p>No image generated yet.</p>}
+      </div>
+      </div>
+      
     </div>
   );
 };
