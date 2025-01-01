@@ -4,7 +4,8 @@ import generateSceneGraph from "./action/generateSceneGraph"; // 씬 그래프 �
 import generateUpdatedTextUsingAPI from "./action/generateUpdatedText";
 
 const App = () => {
-  const [sceneGraph, setSceneGraph] = useState({ // sceneGraph is in the form of a JSON object, with {"objects":["attributes"], "relationships"}
+  const [sceneGraph, setSceneGraph] = useState({
+    // sceneGraph is in the form of a JSON object, with {"objects":["attributes"], "relationships"}
     objects: [
       { id: "object1", name: "wolf" },
       { id: "object2", name: "icecream", attributes: ["chocolate"] },
@@ -12,8 +13,9 @@ const App = () => {
     relationships: [
       { source: "object1", target: "object2", relation: "holding" },
     ],
-  }); 
-  const [graphData, setGraphData] = useState({ // graphData is in the form of a JSON object, with {"nodes", "links"}, to be easily used by the SceneGraph component
+  });
+  const [graphData, setGraphData] = useState({
+    // graphData is in the form of a JSON object, with {"nodes", "links"}, to be easily used by the SceneGraph component
     nodes: [
       { id: "object1", name: "wolf", type: "object" },
       { id: "object2", name: "chocolate icecream", type: "object" },
@@ -45,9 +47,9 @@ const App = () => {
     setLoading(true); // 로딩 시작
     try {
       const data = await generateSceneGraph(inputText); // 씬 그래프 생성
-      const { sceneGraph, nodes, links} = data;
+      const { sceneGraph, nodes, links } = data;
       setSceneGraph(sceneGraph); // 생성된 씬 그래프 설정
-      setGraphData({nodes, links}); // 생성된 그래프 데이터 설정
+      setGraphData({ nodes, links }); // 생성된 그래프 데이터 설정
     } catch (error) {
       console.error("Error generating scene graph:", error);
     }
