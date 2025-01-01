@@ -139,26 +139,25 @@ const App = () => {
 
       {loading && <p>Loading...</p>}
       <div style={{ display: "flex", flexDirection: "row" }}>
-      {graphData ? (
-        <SceneGraph
-          graphData={graphData}
-          setGraphData={setGraphData}
-          currentMode={currentMode}
-          inputText={inputText}
-          setInputText={setInputText}
-        />
-      ) : (
-        <p>Enter a prompt to generate a scene graph.</p>
-      )}
-
-      <div>
-        {image && (
-          <img src={`data:image/png;base64,${image}`} alt="Generated" />
+        {graphData ? (
+          <SceneGraph
+            graphData={graphData}
+            setGraphData={setGraphData}
+            currentMode={currentMode}
+            inputText={inputText}
+            setInputText={setInputText}
+          />
+        ) : (
+          <p>Enter a prompt to generate a scene graph.</p>
         )}
-        {!image && <p>No image generated yet.</p>}
+
+        <div>
+          {image && (
+            <img src={`data:image/png;base64,${image}`} alt="Generated" />
+          )}
+          {!image && <p>No image generated yet.</p>}
+        </div>
       </div>
-      </div>
-      
     </div>
   );
 };
