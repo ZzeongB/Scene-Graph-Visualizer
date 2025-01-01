@@ -15,10 +15,6 @@ const SceneGraph = ({
   const [inputValue, setInputValue] = useState(""); // 사용자 입력 값
   const [selectedType, setSelectedType] = useState("object"); // 기본 타입 설정
 
-  // useEffect(() => {
-  //   console.log("graphData", graphData);
-  // }, [graphData]);
-
   useEffect(() => {
     if (!graphData || !graphData.nodes || !graphData.links) {
       console.warn("Invalid graphData:", graphData);
@@ -77,20 +73,6 @@ const SceneGraph = ({
       .attr("stroke", "#aaa")
       .attr("stroke-width", 2)
       .attr("marker-end", "url(#arrowhead)");
-
-    if (currentMode === "edit") {
-      link.on("contextmenu", (event, d) => {
-        // 'd'는 해당 Edge 데이터
-        console.log("Delete link", d);
-        event.preventDefault(); // 기본 컨텍스트 메뉴 방지
-
-        // React 상태에서 해당 Edge 삭제
-        setGraphData((prevData) => ({
-          ...prevData,
-          links: prevData.links.filter((link) => link !== d), // 선택된 Edge 삭제
-        }));
-      });
-    }
 
     svg
       .append("defs")
@@ -153,6 +135,9 @@ const SceneGraph = ({
       .style("font-size", "12px")
       .text((d) => d.name);
 
+    // ========================================
+    //  Add event listeners based on current mode
+    // ========================================
     if (currentMode === "default") {
       nodeGroup.call(
         d3
@@ -174,93 +159,125 @@ const SceneGraph = ({
       );
     }
 
-    if (currentMode === "edit") {
-      nodeGroup
-        .call(
-          d3
-            .drag()
-            .on("start", (event, node) => {
-              draggingNodeRef.current = node; // 드래그 시작 시 노드 저장
-              setTempEdge({ source: node, target: { x: node.x, y: node.y } }); // tempEdge 초기화
-            })
-            .on("drag", (event) => {
-              if (draggingNodeRef.current) {
-                const svg = d3.select(svgRef.current);
-                const point = svg.node().createSVGPoint();
-                point.x = event.sourceEvent.clientX; // 마우스 스크린 좌표
-                point.y = event.sourceEvent.clientY; // 마우스 스크린 좌표
+    if (currentMode === "draw") {
+      nodeGroup.call(
+        d3
+          .drag()
+          .on("start", (event, node) => {
+            draggingNodeRef.current = node; // 드래그 시작 시 노드 저장
+            setTempEdge({ source: node, target: { x: node.x, y: node.y } }); // tempEdge 초기화
+          })
+          .on("drag", (event) => {
+            if (draggingNodeRef.current) {
+              const svg = d3.select(svgRef.current);
+              const point = svg.node().createSVGPoint();
+              point.x = event.sourceEvent.clientX; // 마우스 스크린 좌표
+              point.y = event.sourceEvent.clientY; // 마우스 스크린 좌표
 
-                // 스크린 좌표를 SVG 좌표로 변환
-                const transformedPoint = point.matrixTransform(
-                  svg.node().getScreenCTM().inverse()
-                );
+              // 스크린 좌표를 SVG 좌표로 변환
+              const transformedPoint = point.matrixTransform(
+                svg.node().getScreenCTM().inverse()
+              );
 
-                // tempEdge 업데이트
-                setTempEdge({
+              // tempEdge 업데이트
+              setTempEdge({
+                source: draggingNodeRef.current,
+                target: { x: transformedPoint.x, y: transformedPoint.y },
+              });
+            }
+          })
+          .on("end", (event) => {
+            if (draggingNodeRef.current) {
+              // 연결할 노드 찾기
+              const svg = d3.select(svgRef.current);
+              const point = svg.node().createSVGPoint();
+              point.x = event.sourceEvent.clientX; // 스크린 좌표
+              point.y = event.sourceEvent.clientY; // 스크린 좌표
+
+              // 스크린 좌표를 SVG 로컬 좌표로 변환
+              const transformedPoint = point.matrixTransform(
+                svg.node().getScreenCTM().inverse()
+              );
+
+              const targetNode = graphData.nodes.find(
+                (n) =>
+                  Math.hypot(
+                    n.x - transformedPoint.x,
+                    n.y - transformedPoint.y
+                  ) < 30
+              );
+
+              console.log("end graphData", graphData);
+              console.log("end", draggingNodeRef.current, targetNode);
+
+              if (targetNode && targetNode !== draggingNodeRef.current) {
+                // 새 엣지 추가
+                const newEdge = {
                   source: draggingNodeRef.current,
-                  target: { x: transformedPoint.x, y: transformedPoint.y },
-                });
+                  target: targetNode,
+                };
+
+                console.log("newEdge", newEdge);
+
+                // React 상태로 링크 업데이트
+                setGraphData((prevData) => ({
+                  ...prevData,
+                  links: [...prevData.links, newEdge],
+                }));
               }
-            })
-            .on("end", (event) => {
-              if (draggingNodeRef.current) {
-                // 연결할 노드 찾기
-                const svg = d3.select(svgRef.current);
-                const point = svg.node().createSVGPoint();
-                point.x = event.sourceEvent.clientX; // 스크린 좌표
-                point.y = event.sourceEvent.clientY; // 스크린 좌표
 
-                // 스크린 좌표를 SVG 로컬 좌표로 변환
-                const transformedPoint = point.matrixTransform(
-                  svg.node().getScreenCTM().inverse()
-                );
+              // tempEdge 초기화
+              setTempEdge(null);
+              draggingNodeRef.current = null;
+            }
+          })
+      );
+    }
 
-                const targetNode = graphData.nodes.find(
-                  (n) =>
-                    Math.hypot(
-                      n.x - transformedPoint.x,
-                      n.y - transformedPoint.y
-                    ) < 30
-                );
+    if (currentMode === "edit") {
+      nodeGroup.on("click", (event, node) => {
+        console.log("Edit node", node);
+        event.preventDefault(); // 기본 컨텍스트 메뉴 방지
 
-                console.log("end graphData", graphData);
-                console.log("end", draggingNodeRef.current, targetNode);
-
-                if (targetNode && targetNode !== draggingNodeRef.current) {
-                  // 새 엣지 추가
-                  const newEdge = {
-                    source: draggingNodeRef.current,
-                    target: targetNode,
-                  };
-
-                  console.log("newEdge", newEdge);
-
-                  // React 상태로 링크 업데이트
-                  setGraphData((prevData) => ({
-                    ...prevData,
-                    links: [...prevData.links, newEdge],
-                  }));
-                }
-
-                // tempEdge 초기화
-                setTempEdge(null);
-                draggingNodeRef.current = null;
-              }
-            })
-        )
-        .on("contextmenu", (event, node) => {
-          console.log("Delete node", node);
-          event.preventDefault(); // Prevent default context menu
-
-          // React 상태로 노드와 연결된 링크 삭제
+        // React 상태에서 해당 노드 수정
+        const newName = prompt("Enter new name for the node:", node.name);
+        if (newName) {
           setGraphData((prevData) => ({
             ...prevData,
-            nodes: prevData.nodes.filter((n) => n !== node),
-            links: prevData.links.filter(
-              (link) => link.source !== node && link.target !== node
+            nodes: prevData.nodes.map((n) =>
+              n === node ? { ...n, name: newName } : n
             ),
           }));
-        });
+        }
+      });
+    }
+
+    if (currentMode === "delete") {
+      nodeGroup.on("click", (event, node) => {
+        console.log("Delete node", node);
+        event.preventDefault(); // 기본 컨텍스트 메뉴 방지
+
+        // React 상태에서 해당 노드 삭제
+        setGraphData((prevData) => ({
+          ...prevData,
+          nodes: prevData.nodes.filter((n) => n !== node), // 선택된 노드 삭제
+          links: prevData.links.filter(
+            (link) => link.source !== node && link.target !== node
+          ), // 선택된 노드와 연결된 링크 삭제
+        }));
+      });
+
+      link.on("click", (event, d) => {
+        // 'd'는 해당 Edge 데이터
+        console.log("Delete link", d);
+        event.preventDefault(); // 기본 컨텍스트 메뉴 방지
+
+        // React 상태에서 해당 Edge 삭제
+        setGraphData((prevData) => ({
+          ...prevData,
+          links: prevData.links.filter((link) => link !== d), // 선택된 Edge 삭제
+        }));
+      });
     }
 
     // Update node and edge positions
@@ -299,10 +316,9 @@ const SceneGraph = ({
     });
 
     // Add node on canvas click in edit mode
-    // Add node on canvas click in edit mode
     svg.on("click", (event) => {
       console.log("SVG Clicked", event);
-      if (currentMode === "edit") {
+      if (currentMode === "draw") {
         const svgElement = svgRef.current;
         const point = svgElement.createSVGPoint();
         point.x = event.clientX; // 마우스 스크린 X 좌표
@@ -351,7 +367,7 @@ const SceneGraph = ({
         }
       `}</style>
       {/* Node name input */}
-      {inputPosition && (
+      {inputPosition && currentMode === "draw" && (
         <form
           onSubmit={handleInputSubmit}
           style={{

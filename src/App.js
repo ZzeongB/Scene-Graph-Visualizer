@@ -18,7 +18,7 @@ const App = () => {
     // graphData is in the form of a JSON object, with {"nodes", "links"}, to be easily used by the SceneGraph component
     nodes: [
       { id: "object1", name: "wolf", type: "object" },
-      { id: "object2", name: "chocolate icecream", type: "object" },
+      { id: "object2", name: "icecream", type: "object" },
       { id: "object2-chocolate", name: "chocolate", type: "attribute" },
       { id: "rel-0", name: "holding", type: "relationship" },
     ],
@@ -98,9 +98,10 @@ const App = () => {
         Convert Scene Graph to Text
       </button>
       <div className="mode-selector">
-        <button onClick={() => changeMode("default")}>Default Mode</button>
-        <button onClick={() => changeMode("edit")}>Edit Mode</button>
-        <button onClick={() => changeMode("custom")}>Custom Mode</button>
+        <button onClick={() => changeMode("default")}>Default</button>
+        <button onClick={() => changeMode("draw")}>Draw</button>
+        <button onClick={() => changeMode("edit")}>Edit</button>
+        <button onClick={() => changeMode("delete")}>Delete</button>
       </div>
 
       {/* 현재 모드 표시 */}
