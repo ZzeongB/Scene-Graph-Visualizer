@@ -112,16 +112,16 @@ const App = () => {
           style={{ padding: "10px" }}
           onClick={handleGenerateSceneGraph}
         >
-          Generate
+          Text to Scene Graph
         </button>
         <button
           onClick={handleGenerateTextFromSceneGraph}
           style={{ padding: "10px" }}
         >
-          Convert Scene Graph to Text
+          Scene Graph to Text
         </button>
         <button onClick={handleGenerateImageSubmit} style={{ padding: "10px" }}>
-          GenerateImage
+          Generate Image
         </button>
       </div>
 
