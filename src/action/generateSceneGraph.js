@@ -101,7 +101,7 @@ const transformGraphData = (sceneGraph) => {
         }))
       ),
     ...sceneGraph.relationships.map((rel, index) => ({
-      id: `rel-${index}`,
+      id: `relationship${index}`,
       name: rel.relation,
       type: "relationship",
     })),
@@ -111,11 +111,11 @@ const transformGraphData = (sceneGraph) => {
   const links = [
     ...sceneGraph.relationships.map((rel, index) => ({
       source: rel.source,
-      target: `rel-${index}`, // 관계 노드로 연결
+      target: `relationship${index}`, // 관계 노드로 연결
       relation: rel.relation,
     })),
     ...sceneGraph.relationships.map((rel, index) => ({
-      source: `rel-${index}`, // 관계 노드에서 대상 노드로 연결
+      source: `relationship${index}`, // 관계 노드에서 대상 노드로 연결
       target: rel.target,
       relation: rel.relation,
     })),

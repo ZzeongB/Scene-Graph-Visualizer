@@ -24,11 +24,11 @@ const App = () => {
       { id: "object1", name: "wolf", type: "object" },
       { id: "object2", name: "icecream", type: "object" },
       { id: "object2-chocolate", name: "chocolate", type: "attribute" },
-      { id: "rel-0", name: "holding", type: "relationship" },
+      { id: "relationship0", name: "holding", type: "relationship" },
     ],
     links: [
-      { source: "object1", target: "rel-0", relation: "holding" },
-      { source: "rel-0", target: "object2", relation: "holding" },
+      { source: "object1", target: "relationship0", relation: "holding" },
+      { source: "relationship0", target: "object2", relation: "holding" },
       {
         source: "object2",
         target: "object2-chocolate",
