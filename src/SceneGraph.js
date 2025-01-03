@@ -5,10 +5,10 @@ const SceneGraph = ({
   graphData,
   setGraphData,
   currentMode,
-  inputText,
-  setInputText,
   sceneGraph,
   setSceneGraph,
+  width=800,
+  height=600, 
 }) => {
   const svgRef = useRef();
   const [tempEdge, setTempEdge] = useState(null); // Temporary edge while dragging
@@ -23,15 +23,9 @@ const SceneGraph = ({
       return;
     }
 
-    const width = 1200;
-    const height = 600;
-
     /// object, attribute, relationship 노드 필터링
     const objectNodes = graphData.nodes.filter(
       (node) => node.type === "object"
-    );
-    const attributeNodes = graphData.nodes.filter(
-      (node) => node.type === "attribute"
     );
     const relationshipNodes = graphData.nodes.filter(
       (node) => node.type === "relationship"
@@ -287,7 +281,7 @@ const SceneGraph = ({
                 updatedGraphData.links.push(newEdge);
 
                 let updatedSceneGraph = { ...sceneGraph };
-                if (newEdge.relation == "has attribute") {
+                if (newEdge.relation === "has attribute") {
                   const objectId = newEdge.source.id;
                   const attributeName = newEdge.target.name;
                   updatedSceneGraph = {
@@ -308,13 +302,13 @@ const SceneGraph = ({
                   // then, relationship
                   // check if both links object->relationship->object exists
                   const existingRelationship = graphData.links.find(
-                    (rel) => (rel.relation == newEdge.relation && rel.source != newEdge.source && rel.target != newEdge.target)
+                    (rel) => (rel.relation === newEdge.relation && rel.source !== newEdge.source && rel.target !== newEdge.target)
                   );
 
                   if (existingRelationship) {
                     // find the source and target objects whose type is "object"
                     let sourceId, targetId;
-                    if (newEdge.source.type == "object") {
+                    if (newEdge.source.type === "object") {
                       sourceId = newEdge.source.id;
                       targetId = existingRelationship.target.id;
                     } else {
