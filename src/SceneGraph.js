@@ -7,6 +7,8 @@ const SceneGraph = ({
   currentMode,
   inputText,
   setInputText,
+  sceneGraph,
+  setSceneGraph,
 }) => {
   const svgRef = useRef();
   const [tempEdge, setTempEdge] = useState(null); // Temporary edge while dragging
@@ -14,6 +16,10 @@ const SceneGraph = ({
   const [inputPosition, setInputPosition] = useState(null); // 입력창 위치
   const [inputValue, setInputValue] = useState(""); // 사용자 입력 값
   const [selectedType, setSelectedType] = useState("object"); // 기본 타입 설정
+
+  useEffect(() => {
+    console.log("GraphData rendered", graphData);
+  }, [graphData]);
 
   useEffect(() => {
     if (!graphData || !graphData.nodes || !graphData.links) {
@@ -236,22 +242,69 @@ const SceneGraph = ({
 
     if (currentMode === "edit") {
       nodeGroup.on("click", (event, node) => {
-        console.log("Edit node", node);
         event.preventDefault(); // 기본 컨텍스트 메뉴 방지
-
-        // React 상태에서 해당 노드 수정
+    
         const newName = prompt("Enter new name for the node:", node.name);
-        if (newName) {
-          setGraphData((prevData) => ({
-            ...prevData,
-            nodes: prevData.nodes.map((n) =>
-              n === node ? { ...n, name: newName } : n
-            ),
-          }));
+        if (!newName || newName.trim() === "") {
+          console.warn("Invalid name. Update aborted.");
+          return;
         }
+    
+        // sceneGraph 업데이트
+        let updatedSceneGraph = { ...sceneGraph };
+        let newId = node.id;
+    
+        if (node.type === "object") {
+          updatedSceneGraph = {
+            ...sceneGraph,
+            objects: sceneGraph.objects.map((obj) =>
+              obj.id === node.id ? { ...obj, name: newName } : obj
+            ),
+          };
+        } else if (node.type === "attribute") {
+          const objectId = node.id.split("-")[0];
+          updatedSceneGraph = {
+            ...sceneGraph,
+            objects: sceneGraph.objects.map((obj) =>
+              obj.id === objectId
+                ? {
+                    ...obj,
+                    attributes: obj.attributes.map((attr) =>
+                      attr === node.name ? newName : attr
+                    ),
+                  }
+                : obj
+            ),
+          };
+
+          newId = `${objectId}-${newName}`;
+        } else if (node.type === "relationship") {
+          updatedSceneGraph = {
+            ...sceneGraph,
+            relationships: sceneGraph.relationships.map((rel) =>
+              rel.relation === node.name ? { ...rel, relation: newName } : rel
+            ),
+          };
+        }
+    
+        // graphData 업데이트
+        const updatedGraphData = {
+          links: graphData.links.map((link) => ({
+            ...link,
+            source: link.source.id === node.id ? newId : link.source,
+            target: link.target.id === node.id ? newId : link.target,
+          })),
+          nodes: graphData.nodes.map((n) =>
+            n.id === node.id ? { ...n, name: newName, id: newId } : n
+          ),
+        };
+
+        // 상태 동기화
+        setSceneGraph(updatedSceneGraph);
+        setGraphData(updatedGraphData);
       });
     }
-
+    
     if (currentMode === "delete") {
       nodeGroup.on("click", (event, node) => {
         console.log("Delete node", node);

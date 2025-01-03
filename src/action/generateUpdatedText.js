@@ -29,6 +29,7 @@ const generateUpdatedTextUsingAPI = async (sceneGraph, beforeText) => {
     1. The updated prompt should NEVER have other objects or attributes or relationships that are NOT IN THE SCENE GRAPH.
     2. The original description should be preserved as much as possible.
     3. You should avoid repeating the same information.
+    4. Avoid IDs in the json. Use the NAMEs instead.
 
     ### Your task
     Original prompt:

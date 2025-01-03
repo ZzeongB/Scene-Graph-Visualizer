@@ -71,8 +71,10 @@ const generateSceneGraph = async (prompt) => {
       // 변환된 데이터로 그래프 구성
       const transformedGraph = transformGraphData(sceneGraph);
 
-      console.log("Scene Graph (Transformed):", transformedGraph);
-      return transformedGraph;
+      // console.log("Scene Graph (Transformed):", transformedGraph);
+      // return transformedGraph;
+
+      return sceneGraph;
     } else {
       console.error("Error:", data);
       alert("Failed to generate scene graph. Check console for details.");
@@ -84,6 +86,7 @@ const generateSceneGraph = async (prompt) => {
 };
 
 const transformGraphData = (sceneGraph) => {
+   
   if (!sceneGraph || !sceneGraph.objects || !sceneGraph.relationships) {
     console.error("Invalid sceneGraph structure:", sceneGraph);
     return { nodes: [], links: [] };
@@ -132,7 +135,7 @@ const transformGraphData = (sceneGraph) => {
     ),
   ];
 
-  return { sceneGraph, nodes, links };
+  return { nodes, links };
 };
 
-export default generateSceneGraph;
+export { generateSceneGraph, transformGraphData };

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import SceneGraph from "./SceneGraph";
-import generateSceneGraph from "./action/generateSceneGraph"; // 씬 그래프 생성 함수
+import {generateSceneGraph, transformGraphData} from "./action/generateSceneGraph"; // 씬 그래프 생성 함수
 import generateUpdatedTextUsingAPI from "./action/generateUpdatedText";
 import generateImage from "./action/generateImage";
 
@@ -53,9 +53,11 @@ const App = () => {
     event.preventDefault();
     setLoading(true); // 로딩 시작
     try {
-      const data = await generateSceneGraph(inputText); // 씬 그래프 생성
-      const { sceneGraph, nodes, links } = data;
+      const sceneGraph = await generateSceneGraph(inputText); // 씬 그래프 생성
       setSceneGraph(sceneGraph); // 생성된 씬 그래프 설정
+      console.log("Scene Graph generated successfully:", sceneGraph);
+      const { nodes, links } = transformGraphData(sceneGraph); // 그래프 데이터 변환
+      console.log("Transformed Graph Data:", { nodes, links });
       setGraphData({ nodes, links }); // 생성된 그래프 데이터 설정
     } catch (error) {
       console.error("Error generating scene graph:", error);
@@ -68,7 +70,9 @@ const App = () => {
     setLoading(true); // 로딩 시작
     try {
       // API를 호출하여 새로운 텍스트 생성
-      const newText = await generateUpdatedTextUsingAPI(graphData, inputText);
+      console.log("Generating updated text using API...");
+      console.log("sceneGraph in App.js:", sceneGraph);
+      const newText = await generateUpdatedTextUsingAPI(sceneGraph, inputText);
 
       console.log("Updated Text in App.js:", newText);
       setInputText(newText); // 새로 생성된 텍스트 업데이트
@@ -146,6 +150,8 @@ const App = () => {
             currentMode={currentMode}
             inputText={inputText}
             setInputText={setInputText}
+            sceneGraph={sceneGraph}
+            setSceneGraph={setSceneGraph}
           />
         ) : (
           <p>Enter a prompt to generate a scene graph.</p>
