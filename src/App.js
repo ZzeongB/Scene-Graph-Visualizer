@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from "react";
 import SceneGraph from "./SceneGraph";
-import {generateSceneGraph, transformGraphData} from "./action/generateSceneGraph"; // 씬 그래프 생성 함수
+import {
+  generateSceneGraph,
+  transformGraphData,
+} from "./action/generateSceneGraph"; // 씬 그래프 생성 함수
 import generateUpdatedTextUsingAPI from "./action/generateUpdatedText";
 import generateImage from "./action/generateImage";
 

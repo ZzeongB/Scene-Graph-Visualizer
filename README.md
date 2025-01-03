@@ -27,45 +27,56 @@ A React-based application for generating and visualizing scene graphs using D3.j
 
 ## **Installation**
 
-1. **Clone the Repository**:
-   ```bash
-   git clone https://github.com/your-repository/scene-graph-generator.git
-   cd scene-graph-generator
-   ```
+### 1. **Clone the Repository**:
 
-2. **Install Dependencies**:
-   If you are using Yarn:
-   ```bash
-   yarn install
-   ```
-   If you are using npm:
-   ```bash
-   npm install
-   ```
+```bash
+git clone https://github.com/your-repository/scene-graph-generator.git
+cd scene-graph-generator
+```
 
-  To generate image, you should install dependencies for the model:
-  ```bash
-  cd LAION-SG
-  pip install -r requirements.txt
-  ```
+### 2. **Install Dependencies**:
 
-3. **Start the Application**:
-   If you are using Yarn:
-   ```bash
-   yarn start
-   ```
-   If you are using npm:
-   ```bash
-   npm start
-   ```
+If you are using Yarn:
+```bash
+yarn install
+```
+If you are using npm:
+```bash
+npm install
+```
 
-  For the server, open a new terminal and run the following:
-  *Warning: GPU should be available*
-  *Server uses port 5000*
-  ```bash
-  cd LAION-SG
-  python server.py
-  ```
+### 3. **Server**
+
+You should use the server to generate image using model. 
+Clone the LAION-SG repository, and follow the steps in the repository.
+
+
+*Warning: GPU should be available*
+
+```bash
+git clone https://github.com/mengcye/LAION-SG
+cd LAION-SG
+pip install -r requirements.txt
+# follow steps in the repository
+```
+
+
+### 4. **Start the Application**:
+
+If you are using Yarn:
+```bash
+yarn start
+```
+If you are using npm:
+```bash
+npm start
+```
+
+For the server, open a new terminal and run the following:
+```bash
+cd LAION-SG
+python server.py
+```
 ---
 
 ## **Usage**
