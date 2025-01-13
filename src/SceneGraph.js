@@ -7,8 +7,9 @@ const SceneGraph = ({
   currentMode,
   sceneGraph,
   setSceneGraph,
-  width=800,
-  height=600, 
+  dispatch,
+  width = 800,
+  height = 600,
 }) => {
   const svgRef = useRef();
   const [tempEdge, setTempEdge] = useState(null); // Temporary edge while dragging
@@ -26,6 +27,9 @@ const SceneGraph = ({
     /// object, attribute, relationship 노드 필터링
     const objectNodes = graphData.nodes.filter(
       (node) => node.type === "object"
+    );
+    const attributeNodes = graphData.nodes.filter(
+      (node) => node.type === "attribute"
     );
     const relationshipNodes = graphData.nodes.filter(
       (node) => node.type === "relationship"
@@ -46,8 +50,19 @@ const SceneGraph = ({
         const objectIndex = objectNodes.findIndex(
           (objNode) => objNode.id === objectId
         );
-        node.fx = width / 2 - (objectNodes.length - 1) * 75 + objectIndex * 150; // object와 같은 x축
-        node.fy = height / 2 - 100; // object 위에 배치
+
+        // attribute 노드의 index를 계산
+        const attributeIndex = attributeNodes
+          .filter((attrNode) => attrNode.id.split("-")[0] === objectId)
+          .findIndex((attrNode) => attrNode.id === node.id);
+
+        // x축과 y축 모두 조정
+        node.fx =
+          width / 2 -
+          (objectNodes.length - 1) * 75 +
+          objectIndex * 150 +
+          (attributeIndex % 2) * 75; // object와 같은 x축, 겹치지 않게 x축 조정
+        node.fy = height / 2 - 100 - Math.floor(attributeIndex / 2) * 50; // object 위에 배치, 겹치지 않게 y축 조정
       } else if (node.type === "relationship") {
         // relationship 노드는 object와 object 사이에 배치
         const relationshipIndex = relationshipNodes.findIndex(
@@ -281,6 +296,7 @@ const SceneGraph = ({
                 updatedGraphData.links.push(newEdge);
 
                 let updatedSceneGraph = { ...sceneGraph };
+                let updatedGraphChanges = {};
                 if (newEdge.relation === "has attribute") {
                   const objectId = newEdge.source.id;
                   const attributeName = newEdge.target.name;
@@ -297,12 +313,21 @@ const SceneGraph = ({
                         : obj
                     ),
                   };
+                  updatedGraphChanges = 
+                    {
+                      type: "add attribute", // 새로 추가할 객체의 내용
+                      object: objectId,
+                      attribute: attributeName,
+                    };
                 }
                 if (newEdge.relation !== "has attribute") {
                   // then, relationship
                   // check if both links object->relationship->object exists
                   const existingRelationship = graphData.links.find(
-                    (rel) => (rel.relation === newEdge.relation && rel.source !== newEdge.source && rel.target !== newEdge.target)
+                    (rel) =>
+                      rel.relation === newEdge.relation &&
+                      rel.source !== newEdge.source &&
+                      rel.target !== newEdge.target
                   );
 
                   if (existingRelationship) {
@@ -329,11 +354,23 @@ const SceneGraph = ({
                         newRelationship,
                       ],
                     };
+                    updatedGraphChanges = 
+                      {
+                        type: "add relationship",
+                        source: sourceId,
+                        target: targetId,
+                        relation: newEdge.relation,
+                      };
+                    
                   }
                 }
 
                 setGraphData(updatedGraphData);
                 setSceneGraph(updatedSceneGraph);
+                dispatch({
+                  type: "ADD_CHANGE",
+                  payload: updatedGraphChanges,
+                });
               }
 
               // Set SceneGraph
@@ -358,6 +395,7 @@ const SceneGraph = ({
 
         // sceneGraph 업데이트
         let updatedSceneGraph = { ...sceneGraph };
+        let updatedGraphChanges = {};
         let newId = node.id;
 
         if (node.type === "object") {
@@ -367,6 +405,9 @@ const SceneGraph = ({
               obj.id === node.id ? { ...obj, name: newName } : obj
             ),
           };
+          updatedGraphChanges = 
+            { type: "rename object", object: node.id, name: newName }
+          ;
         } else if (node.type === "attribute") {
           const objectId = node.id.split("-")[0];
           updatedSceneGraph = {
@@ -382,6 +423,13 @@ const SceneGraph = ({
                 : obj
             ),
           };
+          updatedGraphChanges = 
+            {
+              type: "rename attribute",
+              object: objectId,
+              attribute: node.name,
+              name: newName,
+            }
 
           newId = `${objectId}-${newName}`;
         } else if (node.type === "relationship") {
@@ -391,6 +439,12 @@ const SceneGraph = ({
               rel.relation === node.name ? { ...rel, relation: newName } : rel
             ),
           };
+          updatedGraphChanges = 
+            {
+              type: "rename relationship",
+              relation: node.name,
+              name: newName,
+            }
         }
 
         // graphData 업데이트
@@ -408,6 +462,10 @@ const SceneGraph = ({
         // 상태 동기화
         setSceneGraph(updatedSceneGraph);
         setGraphData(updatedGraphData);
+        dispatch({
+          type: "ADD_CHANGE",
+          payload: updatedGraphChanges,
+        });
       });
     }
 
@@ -427,18 +485,18 @@ const SceneGraph = ({
 
         // SceneGraph 업데이트
         let updatedSceneGraph = { ...sceneGraph };
+        let updatedGraphChanges = {};
         if (node.type === "object") {
           updatedSceneGraph = {
             ...sceneGraph,
             objects: sceneGraph.objects.filter((obj) => obj.id !== node.id),
-          };
-          // remove relationships related to this object
-          updatedSceneGraph = {
-            ...sceneGraph,
             relationships: sceneGraph.relationships.filter(
               (rel) => rel.source !== node.id && rel.target !== node.id
             ),
           };
+
+          updatedGraphChanges = 
+            { type: "delete object", object: node.id }
         }
         if (node.type === "attribute") {
           const objectId = node.id.split("-")[0];
@@ -455,6 +513,12 @@ const SceneGraph = ({
                 : obj
             ),
           };
+          updatedGraphChanges =
+            {
+              type: "delete attribute",
+              object: objectId,
+              attribute: node.name,
+            }
         }
         if (node.type === "relationship") {
           updatedSceneGraph = {
@@ -463,10 +527,16 @@ const SceneGraph = ({
               (rel) => rel.relation !== node.name
             ),
           };
+          updatedGraphChanges = 
+            { type: "delete relationship", relation: node.name }
         }
 
         setGraphData(updatedGraphData);
         setSceneGraph(updatedSceneGraph);
+        dispatch({
+          type: "ADD_CHANGE",
+          payload: updatedGraphChanges,
+        });
       });
 
       link.on("click", (event, d) => {
@@ -482,8 +552,9 @@ const SceneGraph = ({
 
         // SceneGraph 업데이트
         let updatedSceneGraph = { ...sceneGraph };
+        let updatedGraphChanges = {};
 
-        // if attribute->object, remove attribute from object
+        // if attribute->object, delete attribute from object
         if (d.relation === "has attribute") {
           const objectId = d.source.id;
           const attributeName = d.target.name;
@@ -500,9 +571,15 @@ const SceneGraph = ({
                 : obj
             ),
           };
+          updatedGraphChanges =
+            {
+              type: "delete attribute",
+              object: objectId,
+              attribute: attributeName,
+            }
         }
 
-        // if object->relationship, remove relationship
+        // if object->relationship, delete relationship
         if (d.source.type === "object" && d.target.type === "relationship") {
           updatedSceneGraph = {
             ...sceneGraph,
@@ -510,6 +587,13 @@ const SceneGraph = ({
               (rel) => rel.relation !== d.relation
             ),
           };
+          updatedGraphChanges = 
+            {
+              type: "delete relationship",
+              source: d.source.id,
+              target: d.target.id,
+              relation: d.relation,
+            }
         }
         if (d.source.type === "relationship" && d.target.type === "object") {
           updatedSceneGraph = {
@@ -518,10 +602,21 @@ const SceneGraph = ({
               (rel) => rel.relation !== d.relation
             ),
           };
+          updatedGraphChanges =
+            {
+              type: "delete relationship",
+              source: d.source.id,
+              target: d.target.id,
+              relation: d.relation,
+            }
         }
 
         setGraphData(updatedGraphData);
         setSceneGraph(updatedSceneGraph);
+        dispatch({
+          type: "ADD_CHANGE",
+          payload: updatedGraphChanges,
+        });
       });
     }
 
@@ -602,6 +697,7 @@ const SceneGraph = ({
 
       // Update sceneGraph
       let updatedSceneGraph = { ...sceneGraph };
+      let updatedGraphChanges = {};
       if (selectedType === "object") {
         updatedSceneGraph = {
           ...sceneGraph,
@@ -610,8 +706,14 @@ const SceneGraph = ({
             { id: newNode.id, name: newNode.name },
           ],
         };
+        updatedGraphChanges =
+          { type: "add object", object: newNode.id, name: newNode.name }
       }
       setSceneGraph(updatedSceneGraph);
+      dispatch({
+        type: "ADD_CHANGE",
+        payload: updatedGraphChanges,
+      });
       setInputValue(""); // Reset input
       setSelectedType("object"); // Reset type
       setInputPosition(null); // Hide input

@@ -1,11 +1,23 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useReducer } from "react";
 import SceneGraph from "./SceneGraph";
 import {
   generateSceneGraph,
   transformGraphData,
 } from "./action/generateSceneGraph"; // 씬 그래프 생성 함수
 import generateUpdatedTextUsingAPI from "./action/generateUpdatedText";
-import generateImage from "./action/generateImage";
+import {generateImage, editImageWithMask} from "./action/generateImage";
+
+// Reducer 함수 정의
+const graphChangesReducer = (state, action) => {
+  switch (action.type) {
+    case "RESET":
+      return []; // 상태 초기화
+    case "ADD_CHANGE":
+      return [...state, action.payload]; // 새로운 변경 사항 추가
+    default:
+      throw new Error(`Unknown action type: ${action.type}`);
+  }
+};
 
 const App = () => {
   const [sceneGraph, setSceneGraph] = useState({
@@ -37,15 +49,21 @@ const App = () => {
     ],
   }); // 씬 그래프 데이터 상태
   const [image, setImage] = useState(null);
+  const [image_metadata, setImageMetadata] = useState(null);
 
   const [inputText, setInputText] = useState("wolf holding chocolate icecream"); // 사용자 입력 상태
   const [loading, setLoading] = useState(false); // 로딩 상태 관리
   const [currentMode, setCurrentMode] = useState("default"); // "default", "edit", "custom"
+  const [graphChanges, dispatch] = useReducer(graphChangesReducer, []);
 
   useEffect(() => {
     // 초기 로딩 시 씬 그래프 생성
     console.log("image generated", image);
   }, [image]);
+  useEffect(() => {
+    // 초기 로딩 시 씬 그래프 생성
+    console.log("sceneGraph Changed", graphChanges);
+  }, [graphChanges]);
   // 모드 변경 함수
   const changeMode = (mode) => {
     setCurrentMode(mode);
@@ -85,18 +103,37 @@ const App = () => {
     setLoading(false); // 로딩 종료
   };
 
-  const handleGenerateImageSubmit = async () => {
+  const handleImageEditWithMask= async () => {
     setLoading(true); // 로딩 시작
     try {
-      const result = await generateImage(sceneGraph);
+      const result = await editImageWithMask(image_metadata, sceneGraph, graphChanges); // 이미지 생성
+      const metadata = {"original_sg": result["original_sg"], "image_path": result["image_path"], "mask_path": result["mask_path"]};
 
       setImage(result["image"]);
+      setImageMetadata(metadata);
+      dispatch({ type: "RESET" });
       console.log("Image generated successfully");
     } catch (error) {
       console.error("Error generating image:", error);
     }
     setLoading(false); // 로딩 종료
   };
+
+  const handleGenerateImageSubmit = async () => {
+    setLoading(true);
+    try {
+      const result = await generateImage(sceneGraph);
+      const metadata = {"original_sg": result["original_sg"], "image_path": result["image_path"], "mask_path": result["mask_path"]};
+
+      setImage(result["image"]);
+      setImageMetadata(metadata);
+      dispatch({ type: "RESET" });
+      console.log("Image edited with mask successfully");
+    } catch (error) {
+      console.error("Error editing image with mask:", error);
+    }
+    setLoading(false);
+  }
 
   return (
     <div style={{ padding: "20px" }}>
@@ -130,6 +167,9 @@ const App = () => {
         <button onClick={handleGenerateImageSubmit} style={{ padding: "10px" }}>
           Generate Image
         </button>
+        <button onClick={handleImageEditWithMask} style={{ padding: "10px" }}>
+          Edit image from current image
+        </button>
       </div>
 
       <div className="mode-selector">
@@ -155,6 +195,7 @@ const App = () => {
             setInputText={setInputText}
             sceneGraph={sceneGraph}
             setSceneGraph={setSceneGraph}
+            dispatch={dispatch}
           />
         ) : (
           <p>Enter a prompt to generate a scene graph.</p>
