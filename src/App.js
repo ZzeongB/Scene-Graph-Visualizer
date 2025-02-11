@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useReducer } from "react";
 import SceneGraph from "./SceneGraph";
+import ImageViewer from "./ImageViewer";
 import {
   generateSceneGraph,
   transformGraphData,
@@ -49,6 +50,7 @@ const App = () => {
     ],
   }); // 씬 그래프 데이터 상태
   const [image, setImage] = useState(null);
+  const [masks, setMasks] = useState([]);
   const [image_metadata, setImageMetadata] = useState(null);
 
   const [inputText, setInputText] = useState("wolf holding chocolate icecream"); // 사용자 입력 상태
@@ -64,6 +66,16 @@ const App = () => {
     // 초기 로딩 시 씬 그래프 생성
     console.log("sceneGraph Changed", graphChanges);
   }, [graphChanges]);
+  useEffect(() => {
+    // 초기 로딩 시 씬 그래프 생성
+    console.log("sceneGraph ", sceneGraph);
+  }, [sceneGraph]);
+
+  useEffect(()=>{
+    console.log("graphData ", graphData);
+  }, [graphData]);
+
+
   // 모드 변경 함수
   const changeMode = (mode) => {
     setCurrentMode(mode);
@@ -86,17 +98,15 @@ const App = () => {
     setLoading(false); // 로딩 종료
   };
 
-  // 씬 그래프를 텍스트로 변환하는 함수
   const handleGenerateTextFromSceneGraph = async () => {
     setLoading(true); // 로딩 시작
     try {
-      // API를 호출하여 새로운 텍스트 생성
       console.log("Generating updated text using API...");
       console.log("sceneGraph in App.js:", sceneGraph);
       const newText = await generateUpdatedTextUsingAPI(sceneGraph, inputText);
 
       console.log("Updated Text in App.js:", newText);
-      setInputText(newText); // 새로 생성된 텍스트 업데이트
+      setInputText(newText); 
     } catch (error) {
       console.error("Error generating updated text:", error);
     }
@@ -108,8 +118,9 @@ const App = () => {
     try {
       const result = await editImageWithMask(image_metadata, sceneGraph, graphChanges); // 이미지 생성
       const metadata = {"original_sg": result["original_sg"], "image_path": result["image_path"], "mask_path": result["mask_path"]};
-
+      
       setImage(result["image"]);
+      setMasks(result["masks"]);
       setImageMetadata(metadata);
       dispatch({ type: "RESET" });
       console.log("Image generated successfully");
@@ -126,6 +137,7 @@ const App = () => {
       const metadata = {"original_sg": result["original_sg"], "image_path": result["image_path"], "mask_path": result["mask_path"]};
 
       setImage(result["image"]);
+      setMasks(result["masks"]);
       setImageMetadata(metadata);
       dispatch({ type: "RESET" });
       console.log("Image edited with mask successfully");
@@ -134,6 +146,10 @@ const App = () => {
     }
     setLoading(false);
   }
+
+  const handleSegmentClick = (index) => {
+    console.log(`Clicked segment ${index}`);
+  };
 
   return (
     <div style={{ padding: "20px" }}>
@@ -201,12 +217,17 @@ const App = () => {
           <p>Enter a prompt to generate a scene graph.</p>
         )}
 
-        <div>
+        <ImageViewer 
+          image={image}
+          masks={masks}
+          onSegmentClick={handleSegmentClick}
+        />
+        {/* <div>
           {image && (
             <img src={`data:image/png;base64,${image}`} alt="Generated" />
           )}
           {!image && <p>No image generated yet.</p>}
-        </div>
+        </div> */}
       </div>
     </div>
   );
