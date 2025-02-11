@@ -30,24 +30,52 @@ const ImageViewer = ({ image, masks = [] }) => {
     img.src = `data:image/png;base64,${image}`;
   }, [image]);
 
-  // 마스크 그리기
-  const drawMask = async (maskData, isPreview = true) => {
-    if (!maskData) return;
+const drawMask = async (maskData, isPreview = true) => {
+  if (!maskData) return;
 
-    const canvas = fgCanvasRef.current;
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const canvas = fgCanvasRef.current;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height); // 캔버스 초기화
 
-    const maskImg = new Image();
-    maskImg.onload = () => {
-      ctx.save();
-      ctx.globalAlpha = isPreview ? 0.3 : 0.8;
-      ctx.fillStyle = '#0066ff';
-      ctx.drawImage(maskImg, 0, 0);
-      ctx.restore();
-    };
-    maskImg.src = `data:image/png;base64,${maskData.mask}`;
+  const maskImg = new Image();
+  maskImg.onload = () => {
+    // 마스크 이미지를 임시 캔버스에 로드
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = maskImg.width;
+    tempCanvas.height = maskImg.height;
+    const tempCtx = tempCanvas.getContext('2d');
+    tempCtx.drawImage(maskImg, 0, 0);
+
+    // 픽셀 데이터 가져오기
+    const imageData = tempCtx.getImageData(0, 0, maskImg.width, maskImg.height);
+    const data = imageData.data;
+
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+
+      if (r <= 5 && g <= 5 && b <= 5) { 
+        // 거의 검은색(0,0,0)에 가까우면 어두운 회색으로 칠하기
+        data[i] = 50;  // R (어두운 회색)
+        data[i + 1] = 50;  // G
+        data[i + 2] = 50;  // B
+        data[i + 3] = isPreview ? 76 : 204; // 투명도 (0.3 = 76, 0.8 = 204)
+      } else if (r >= 250 && g >= 250 && b >= 250) { 
+        // 거의 흰색(255,255,255)에 가까우면 완전 투명
+        data[i + 3] = 0;
+      }
+    }
+
+    // 기존 픽셀과 혼합되지 않게 설정
+    ctx.globalCompositeOperation = 'copy';
+    ctx.putImageData(imageData, 0, 0);
+    ctx.globalCompositeOperation = 'source-over'; // 기본값 복구
   };
+
+  maskImg.src = `data:image/png;base64,${maskData.mask}`;
+};
+
 
   const handleMouseMove = (e) => {
     const canvas = fgCanvasRef.current;
