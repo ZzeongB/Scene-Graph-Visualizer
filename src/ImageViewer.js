@@ -1,64 +1,55 @@
+import { clear } from "@testing-library/user-event/dist/clear";
 import React, { useEffect, useRef, useState } from "react";
+
+const loadImage = (src) =>
+  new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.src = `data:image/png;base64,${src}`;
+  });
+
+const clearCanvas = (canvas) => {
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+};
 
 const ImageViewer = ({ image, masks = [] }) => {
   const [hoveredMask, setHoveredMask] = useState(null);
   const [selectedMask, setSelectedMask] = useState(null);
-
-  const bgCanvasRef = useRef(null);
-  const fgCanvasRef = useRef(null);
-  const topCanvasRef = useRef(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
-
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
-  // 이미지 로드 및 초기 설정
+  const bgCanvasRef = useRef(null);
+  const fgCanvasRef = useRef(null);
+  const topCanvasRef = useRef(null);
+
   useEffect(() => {
     if (!image) return;
-
     const img = new Image();
     img.onload = () => {
       setImageSize({ width: img.width, height: img.height });
-
-      // 배경 캔버스 설정
-      const bgCanvas = bgCanvasRef.current;
-      bgCanvas.width = img.width;
-      bgCanvas.height = img.height;
-      const bgCtx = bgCanvas.getContext("2d");
-      bgCtx.drawImage(img, 0, 0);
-
-      // 전경 캔버스 설정
-      const fgCanvas = fgCanvasRef.current;
-      fgCanvas.width = img.width;
-      fgCanvas.height = img.height;
-
-      // 최상위 캔버스 설정
-      const topCanvas = topCanvasRef.current;
-      topCanvas.width = img.width;
-      topCanvas.height = img.height;
+      [bgCanvasRef, fgCanvasRef, topCanvasRef].forEach((ref) => {
+        if (ref.current) {
+          ref.current.width = img.width;
+          ref.current.height = img.height;
+        }
+      });
+      bgCanvasRef.current.getContext("2d").drawImage(img, 0, 0);
     };
     img.src = `data:image/png;base64,${image}`;
   }, [image]);
 
   const drawMaskedOriginal = async (maskData) => {
     if (!maskData || !image) return;
-
     const canvas = topCanvasRef.current;
     const ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     const [originalImg, maskImg] = await Promise.all([
-      new Promise((resolve) => {
-        const img = new Image();
-        img.onload = () => resolve(img);
-        img.src = `data:image/png;base64,${image}`;
-      }),
-      new Promise((resolve) => {
-        const img = new Image();
-        img.onload = () => resolve(img);
-        img.src = `data:image/png;base64,${maskData.mask}`;
-      }),
+      loadImage(image),
+      loadImage(maskData.mask),
     ]);
 
     // 원본 이미지를 먼저 그립니다
@@ -82,14 +73,13 @@ const ImageViewer = ({ image, masks = [] }) => {
     const maskPixels = maskImageData.data;
 
     for (let i = 0; i < data.length; i += 4) {
-      const maskR = maskPixels[i];
-      const maskG = maskPixels[i + 1];
-      const maskB = maskPixels[i + 2];
-
-      // 마스크의 검은색 부분을 투명하게 만듭니다
-      if (maskR <= 5 && maskG <= 5 && maskB <= 5) {
-        data[i + 3] = 0; // 알파 채널을 0으로 설정
-      }
+      const [maskR, maskG, maskB] = [
+        maskPixels[i],
+        maskPixels[i + 1],
+        maskPixels[i + 2],
+      ];
+      const isBlack = maskR <= 5 && maskG <= 5 && maskB <= 5;
+      if (isBlack) data[i + 3] = 0; // 알파 채널을 0으로 설정
     }
 
     ctx.putImageData(imageData, 0, 0);
@@ -99,53 +89,40 @@ const ImageViewer = ({ image, masks = [] }) => {
     if (!maskData) return;
 
     const canvas = fgCanvasRef.current;
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas?.getContext("2d");
+    if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     const maskImg = new Image();
-    maskImg.onload = () => {
-      const tempCanvas = document.createElement("canvas");
-      tempCanvas.width = maskImg.width;
-      tempCanvas.height = maskImg.height;
-      const tempCtx = tempCanvas.getContext("2d");
-      tempCtx.drawImage(maskImg, 0, 0);
-
-      const imageData = tempCtx.getImageData(
-        0,
-        0,
-        maskImg.width,
-        maskImg.height
-      );
-      const data = imageData.data;
-
-      for (let i = 0; i < data.length; i += 4) {
-        const r = data[i];
-        const g = data[i + 1];
-        const b = data[i + 2];
-
-        if (r <= 5 && g <= 5 && b <= 5) {
-          data[i] = 50;
-          data[i + 1] = 50;
-          data[i + 2] = 50;
-          data[i + 3] = isPreview ? 76 : 204;
-        } else if (r >= 250 && g >= 250 && b >= 250) {
-          if (isSelected) {
-            data[i] = 50;
-            data[i + 1] = 50;
-            data[i + 2] = 50;
-            data[i + 3] = 204;
-          } else {
-            data[i + 3] = 0;
-          }
-        }
-      }
-
-      ctx.globalCompositeOperation = "copy";
-      ctx.putImageData(imageData, 0, 0);
-      ctx.globalCompositeOperation = "source-over";
-    };
-
     maskImg.src = `data:image/png;base64,${maskData.mask}`;
+    await maskImg.decode();
+
+    const tempCanvas = document.createElement("canvas");
+    Object.assign(tempCanvas, { width: maskImg.width, height: maskImg.height });
+    const tempCtx = tempCanvas.getContext("2d");
+    tempCtx.drawImage(maskImg, 0, 0);
+
+    const imageData = tempCtx.getImageData(0, 0, maskImg.width, maskImg.height);
+    const data = imageData.data;
+
+    for (let i = 0; i < data.length; i += 4) {
+      const [r, g, b] = [data[i], data[i + 1], data[i + 2]];
+      const isBlack = r <= 5 && g <= 5 && b <= 5;
+      const isWhite = r >= 250 && g >= 250 && b >= 250;
+
+      if (isBlack || (isWhite && isSelected)) {
+        [data[i], data[i + 1], data[i + 2], data[i + 3]] = [
+          50,
+          50,
+          50,
+          isPreview ? 76 : 204,
+        ];
+      } else if (isWhite) {
+        data[i + 3] = 0;
+      }
+    }
+
+    ctx.putImageData(imageData, 0, 0);
   };
 
   const handleMouseMove = (e) => {
@@ -187,10 +164,8 @@ const ImageViewer = ({ image, masks = [] }) => {
 
       if (hoveredMask && !selectedMask) {
         setHoveredMask(null);
-        const ctx = fgCanvasRef.current.getContext("2d");
-        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-        const topCtx = topCanvasRef.current.getContext("2d");
-        topCtx.clearRect(0, 0, topCtx.canvas.width, topCtx.canvas.height);
+        clearCanvas(fgCanvasRef.current);
+        clearCanvas(topCanvasRef.current);
       }
     };
 
@@ -200,13 +175,10 @@ const ImageViewer = ({ image, masks = [] }) => {
   const handleClick = async () => {
     if (hoveredMask) {
       if (selectedMask?.name === hoveredMask.name) {
-        console.log("Deselected:", hoveredMask.name);
         setSelectedMask(null);
         drawMask(hoveredMask, true, false);
-        const topCtx = topCanvasRef.current.getContext("2d");
-        topCtx.clearRect(0, 0, topCtx.canvas.width, topCtx.canvas.height);
+        clearCanvas(topCanvasRef.current);
       } else {
-        console.log("Selected:", hoveredMask.name);
         setSelectedMask(hoveredMask);
         drawMask(hoveredMask, false, true);
         await drawMaskedOriginal(hoveredMask);
@@ -214,34 +186,18 @@ const ImageViewer = ({ image, masks = [] }) => {
     }
   };
 
-  // 드래그 시작
   const handleMouseDown = (e) => {
     setIsDragging(true);
-    setDragStart({
-      x: e.clientX - position.x,
-      y: e.clientY - position.y,
-    });
+    setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
   };
 
-  // 드래그 중
   const handleMouseMoveTop = (e) => {
     if (!isDragging) return;
-
-    const newX = e.clientX - dragStart.x;
-    const newY = e.clientY - dragStart.y;
-
-    setPosition({ x: newX, y: newY });
+    setPosition({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
   };
 
-  // 드래그 종료
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-
-  // 마우스가 캔버스 밖으로 나갈 때
-  const handleMouseLeave = () => {
-    setIsDragging(false);
-  };
+  const handleMouseUp = () => setIsDragging(false);
+  const handleMouseLeave = () => setIsDragging(false);
 
   return (
     <div
@@ -252,50 +208,51 @@ const ImageViewer = ({ image, masks = [] }) => {
         display: "inline-block",
       }}
     >
-      <canvas
-        ref={bgCanvasRef}
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "100%",
-        }}
-      />
-      <canvas
-        ref={fgCanvasRef}
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "100%",
-          pointerEvents: selectedMask ? "none" : "auto",
-        }}
-        onMouseMove={handleMouseMove}
-        onClick={handleClick}
-      />
-
-      <canvas
-        ref={topCanvasRef}
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "100%",
-          pointerEvents: "none",
-          transform: `translate(${position.x}px, ${position.y}px)`,
-          touchAction: "none",
-          cursor: isDragging ? "grabbing" : "grab",
-          pointerEvents: selectedMask ? "auto" : "none",
-        }}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMoveTop}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseLeave}
-        onDoubleClick={handleClick}
-      />
+      {[bgCanvasRef, fgCanvasRef, topCanvasRef].map((ref, index) => (
+        <canvas
+          key={index}
+          ref={ref}
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            pointerEvents:
+              ref === fgCanvasRef
+                ? selectedMask
+                  ? "none"
+                  : "auto"
+                : ref == topCanvasRef
+                ? selectedMask
+                  ? "auto"
+                  : "none"
+                : "none",
+            transform:
+              ref === topCanvasRef
+                ? `translate(${position.x}px, ${position.y}px)`
+                : "none",
+            cursor:
+              ref === topCanvasRef
+                ? isDragging
+                  ? "grabbing"
+                  : "grab"
+                : "default",
+          }}
+          onMouseMove={
+            ref === fgCanvasRef
+              ? handleMouseMove
+              : ref === topCanvasRef
+              ? handleMouseMoveTop
+              : undefined
+          }
+          onClick={ref === fgCanvasRef ? handleClick : undefined}
+          onDoubleClick={ref === topCanvasRef ? handleClick : undefined}
+          onMouseDown={ref === topCanvasRef ? handleMouseDown : undefined}
+          onMouseUp={ref === topCanvasRef ? handleMouseUp : undefined}
+          onMouseLeave={ref === topCanvasRef ? handleMouseLeave : undefined}
+        />
+      ))}
       {hoveredMask && (
         <div
           style={{
