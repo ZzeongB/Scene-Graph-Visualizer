@@ -1,12 +1,17 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from "react";
 
 const ImageViewer = ({ image, masks = [] }) => {
   const [hoveredMask, setHoveredMask] = useState(null);
   const [selectedMask, setSelectedMask] = useState(null);
+
   const bgCanvasRef = useRef(null);
   const fgCanvasRef = useRef(null);
   const topCanvasRef = useRef(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
+
+  const [isDragging, setIsDragging] = useState(false);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
   // 이미지 로드 및 초기 설정
   useEffect(() => {
@@ -15,12 +20,12 @@ const ImageViewer = ({ image, masks = [] }) => {
     const img = new Image();
     img.onload = () => {
       setImageSize({ width: img.width, height: img.height });
-      
+
       // 배경 캔버스 설정
       const bgCanvas = bgCanvasRef.current;
       bgCanvas.width = img.width;
       bgCanvas.height = img.height;
-      const bgCtx = bgCanvas.getContext('2d');
+      const bgCtx = bgCanvas.getContext("2d");
       bgCtx.drawImage(img, 0, 0);
 
       // 전경 캔버스 설정
@@ -39,37 +44,40 @@ const ImageViewer = ({ image, masks = [] }) => {
   const drawMaskedOriginal = async (maskData) => {
     if (!maskData || !image) return;
 
-    console.log('Draw masked original:', maskData.name);
-    
     const canvas = topCanvasRef.current;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     const [originalImg, maskImg] = await Promise.all([
-      new Promise(resolve => {
+      new Promise((resolve) => {
         const img = new Image();
         img.onload = () => resolve(img);
         img.src = `data:image/png;base64,${image}`;
       }),
-      new Promise(resolve => {
+      new Promise((resolve) => {
         const img = new Image();
         img.onload = () => resolve(img);
         img.src = `data:image/png;base64,${maskData.mask}`;
-      })
+      }),
     ]);
 
     // 원본 이미지를 먼저 그립니다
     ctx.drawImage(originalImg, 0, 0);
 
     // 마스크 처리를 위한 임시 캔버스
-    const tempCanvas = document.createElement('canvas');
+    const tempCanvas = document.createElement("canvas");
     tempCanvas.width = canvas.width;
     tempCanvas.height = canvas.height;
-    const tempCtx = tempCanvas.getContext('2d');
+    const tempCtx = tempCanvas.getContext("2d");
     tempCtx.drawImage(maskImg, 0, 0);
 
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const maskImageData = tempCtx.getImageData(0, 0, canvas.width, canvas.height);
+    const maskImageData = tempCtx.getImageData(
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    );
     const data = imageData.data;
     const maskPixels = maskImageData.data;
 
@@ -80,7 +88,7 @@ const ImageViewer = ({ image, masks = [] }) => {
 
       // 마스크의 검은색 부분을 투명하게 만듭니다
       if (maskR <= 5 && maskG <= 5 && maskB <= 5) {
-        data[i + 3] = 0;  // 알파 채널을 0으로 설정
+        data[i + 3] = 0; // 알파 채널을 0으로 설정
       }
     }
 
@@ -91,18 +99,23 @@ const ImageViewer = ({ image, masks = [] }) => {
     if (!maskData) return;
 
     const canvas = fgCanvasRef.current;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     const maskImg = new Image();
     maskImg.onload = () => {
-      const tempCanvas = document.createElement('canvas');
+      const tempCanvas = document.createElement("canvas");
       tempCanvas.width = maskImg.width;
       tempCanvas.height = maskImg.height;
-      const tempCtx = tempCanvas.getContext('2d');
+      const tempCtx = tempCanvas.getContext("2d");
       tempCtx.drawImage(maskImg, 0, 0);
 
-      const imageData = tempCtx.getImageData(0, 0, maskImg.width, maskImg.height);
+      const imageData = tempCtx.getImageData(
+        0,
+        0,
+        maskImg.width,
+        maskImg.height
+      );
       const data = imageData.data;
 
       for (let i = 0; i < data.length; i += 4) {
@@ -127,15 +140,16 @@ const ImageViewer = ({ image, masks = [] }) => {
         }
       }
 
-      ctx.globalCompositeOperation = 'copy';
+      ctx.globalCompositeOperation = "copy";
       ctx.putImageData(imageData, 0, 0);
-      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalCompositeOperation = "source-over";
     };
 
     maskImg.src = `data:image/png;base64,${maskData.mask}`;
   };
 
   const handleMouseMove = (e) => {
+    console.log("Mouse Move");
     const canvas = fgCanvasRef.current;
     const rect = canvas.getBoundingClientRect();
     const x = (e.clientX - rect.left) * (canvas.width / rect.width);
@@ -143,15 +157,15 @@ const ImageViewer = ({ image, masks = [] }) => {
 
     const checkMask = async (maskData) => {
       const maskImg = new Image();
-      await new Promise(resolve => {
+      await new Promise((resolve) => {
         maskImg.onload = resolve;
         maskImg.src = `data:image/png;base64,${maskData.mask}`;
       });
 
-      const tempCanvas = document.createElement('canvas');
+      const tempCanvas = document.createElement("canvas");
       tempCanvas.width = canvas.width;
       tempCanvas.height = canvas.height;
-      const tempCtx = tempCanvas.getContext('2d');
+      const tempCtx = tempCanvas.getContext("2d");
       tempCtx.drawImage(maskImg, 0, 0);
 
       const pixel = tempCtx.getImageData(x, y, 1, 1).data;
@@ -173,9 +187,9 @@ const ImageViewer = ({ image, masks = [] }) => {
 
       if (hoveredMask && !selectedMask) {
         setHoveredMask(null);
-        const ctx = fgCanvasRef.current.getContext('2d');
+        const ctx = fgCanvasRef.current.getContext("2d");
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-        const topCtx = topCanvasRef.current.getContext('2d');
+        const topCtx = topCanvasRef.current.getContext("2d");
         topCtx.clearRect(0, 0, topCtx.canvas.width, topCtx.canvas.height);
       }
     };
@@ -186,13 +200,13 @@ const ImageViewer = ({ image, masks = [] }) => {
   const handleClick = async () => {
     if (hoveredMask) {
       if (selectedMask?.name === hoveredMask.name) {
-        console.log('Deselected:', hoveredMask.name);
+        console.log("Deselected:", hoveredMask.name);
         setSelectedMask(null);
         drawMask(hoveredMask, true, false);
-        const topCtx = topCanvasRef.current.getContext('2d');
+        const topCtx = topCanvasRef.current.getContext("2d");
         topCtx.clearRect(0, 0, topCtx.canvas.width, topCtx.canvas.height);
       } else {
-        console.log('Selected:', hoveredMask.name);
+        console.log("Selected:", hoveredMask.name);
         setSelectedMask(hoveredMask);
         drawMask(hoveredMask, false, true);
         await drawMaskedOriginal(hoveredMask);
@@ -200,55 +214,97 @@ const ImageViewer = ({ image, masks = [] }) => {
     }
   };
 
+  // 드래그 시작
+  const handleMouseDown = (e) => {
+    setIsDragging(true);
+    setDragStart({
+      x: e.clientX - position.x,
+      y: e.clientY - position.y,
+    });
+  };
+
+  // 드래그 중
+  const handleMouseMoveTop = (e) => {
+    if (!isDragging) return;
+
+    const newX = e.clientX - dragStart.x;
+    const newY = e.clientY - dragStart.y;
+
+    setPosition({ x: newX, y: newY });
+  };
+
+  // 드래그 종료
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  // 마우스가 캔버스 밖으로 나갈 때
+  const handleMouseLeave = () => {
+    setIsDragging(false);
+  };
+
   return (
-    <div style={{ 
-      position: 'relative', 
-      width: imageSize.width, 
-      height: imageSize.height,
-      display: 'inline-block'
-    }}>
+    <div
+      style={{
+        position: "relative",
+        width: imageSize.width,
+        height: imageSize.height,
+        display: "inline-block",
+      }}
+    >
       <canvas
         ref={bgCanvasRef}
         style={{
-          position: 'absolute',
+          position: "absolute",
           top: 0,
           left: 0,
-          width: '100%',
-          height: '100%'
+          width: "100%",
+          height: "100%",
         }}
       />
       <canvas
         ref={fgCanvasRef}
         style={{
-          position: 'absolute',
+          position: "absolute",
           top: 0,
           left: 0,
-          width: '100%',
-          height: '100%'
+          width: "100%",
+          height: "100%",
+          pointerEvents: selectedMask ? "none" : "auto",
         }}
         onMouseMove={handleMouseMove}
         onClick={handleClick}
       />
+
       <canvas
         ref={topCanvasRef}
         style={{
-          position: 'absolute',
+          position: "absolute",
           top: 0,
           left: 0,
-          width: '100%',
-          height: '100%',
-          pointerEvents: 'none'
+          width: "100%",
+          height: "100%",
+          pointerEvents: "none",
+          transform: `translate(${position.x}px, ${position.y}px)`,
+          touchAction: "none",
+          cursor: isDragging ? "grabbing" : "grab",
+          pointerEvents: selectedMask ? "auto" : "none",
         }}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMoveTop}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
+        onDoubleClick={handleClick}
       />
       {hoveredMask && (
-        <div 
+        <div
           style={{
-            position: 'absolute',
+            position: "absolute",
             bottom: 0,
             left: 0,
-            background: 'rgba(0,0,0,0.5)',
-            color: 'white',
-            padding: '4px 8px'
+            background: "rgba(0,0,0,0.5)",
+            color: "white",
+            padding: "4px 8px",
           }}
         >
           {hoveredMask.name}
