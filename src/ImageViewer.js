@@ -13,7 +13,15 @@ const clearCanvas = (canvas) => {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 };
 
-const ImageViewer = ({ image, masks = [] }) => {
+const ImageViewer = ({
+  image,
+  masks = [],
+  graphData,
+  setGraphData,
+  sceneGraph,
+  setSceneGraph,
+  dispatch,
+}) => {
   const [hoveredMask, setHoveredMask] = useState(null);
   const [selectedMask, setSelectedMask] = useState(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
@@ -126,7 +134,6 @@ const ImageViewer = ({ image, masks = [] }) => {
   };
 
   const handleMouseMove = (e) => {
-    console.log("Mouse Move");
     const canvas = fgCanvasRef.current;
     const rect = canvas.getBoundingClientRect();
     const x = (e.clientX - rect.left) * (canvas.width / rect.width);
@@ -193,10 +200,132 @@ const ImageViewer = ({ image, masks = [] }) => {
 
   const handleMouseMoveTop = (e) => {
     if (!isDragging) return;
+    console.log("Dragging", e.clientX, dragStart.x, e.clientY, dragStart.y);
     setPosition({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
   };
 
-  const handleMouseUp = () => setIsDragging(false);
+  const addNode = () => {
+    // Add Node to Scene Graph
+    // 1. Add a new node to GraphData
+    // 2. Add a new edge to GraphData
+    // 3. Update Scene Graph
+    // 4. Update Graph Changes
+    let [move_x, move_y] = [position.x, position.y];
+    const attributeName = "MOVE";
+
+    const objNode = graphData.nodes.find(
+      (node) => node.type === "object" && node.name === selectedMask?.name
+    );
+
+    // If object already has MOVE attribute, update existing node
+    const existingNode = graphData.nodes.find(
+      (node) =>
+        node.type === "attribute" &&
+        node.name === attributeName &&
+        node.id.includes(objNode.id)
+    );
+    let updatedGraphData = graphData;
+    let updatedSceneGraph = sceneGraph;
+    let updatedGraphChanges = {};
+
+    if (existingNode) {
+      console.log("Update Existing Node", existingNode);
+      let [existing_x, existing_y] = existingNode.id.split("_").slice(-2); // change to number
+      existing_x = parseInt(existing_x);
+      existing_y = parseInt(existing_y);
+      console.log(
+        "Existing Node Position",
+        existing_x,
+        existing_y,
+        move_x,
+        move_y
+      );
+      // [move_x, move_y] = [move_x + existing_x, move_y + existing_y];
+      const newNode = {
+        id: `${objNode.id}-${attributeName}_${move_x}_${move_y}`, // Update position
+        name: attributeName, // User-provided name
+        type: "attribute", // User-selected type
+        x: objNode.x, // Default position
+        y: objNode.y + 100, // Default position
+      };
+
+      const newEdge = {
+        source: objNode.id, // Source ID
+        target: newNode.id, // Target ID
+        relation: "has attribute", // User-provided relation
+      };
+
+      updatedGraphData = {
+        nodes: graphData.nodes.map((node) =>
+          node.id === existingNode.id ? newNode : node
+        ),
+        links: graphData.links.map((link) =>
+          link.source.id === objNode.id && link.target.id === existingNode.id
+            ? newEdge
+            : link
+        ),
+      };
+
+      updatedGraphChanges = {
+        type: "add attribute",
+        object: objNode.id,
+        attribute: `attributeName_${move_x}_${move_y}`,
+      };
+    } else {
+      const newNode = {
+        id: `${objNode.id}-${attributeName}_${move_x}_${move_y}`, // Unique ID
+        name: attributeName, // User-provided name
+        type: "attribute", // User-selected type
+        x: objNode.x, // Default position
+        y: objNode.y + 100, // Default position
+      };
+
+      console.log("Add New Node", newNode);
+
+      const newEdge = {
+        source: objNode.id, // Source ID
+        target: newNode.id, // Target ID
+        relation: "has attribute", // User-provided relation
+      };
+
+      updatedGraphData = {
+        nodes: [...graphData.nodes, newNode],
+        links: [...graphData.links, newEdge],
+      };
+
+      updatedSceneGraph = {
+        ...sceneGraph,
+        objects: sceneGraph.objects.map((obj) =>
+          obj.id === objNode.id
+            ? {
+                ...obj,
+                attributes: obj.attributes
+                  ? [...obj.attributes, newNode.name]
+                  : [newNode.name],
+              }
+            : obj
+        ),
+      };
+
+      updatedGraphChanges = {
+        type: "add attribute",
+        object: objNode.id,
+        attribute: `attributeName_${move_x}_${move_y}`,
+      };
+    }
+
+    setGraphData(updatedGraphData);
+    setSceneGraph(updatedSceneGraph);
+    dispatch({
+      type: "ADD_CHANGE",
+      payload: updatedGraphChanges,
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+    addNode();
+  };
   const handleMouseLeave = () => setIsDragging(false);
 
   return (

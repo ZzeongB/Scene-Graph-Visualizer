@@ -6,7 +6,8 @@ import {
   transformGraphData,
 } from "./action/generateSceneGraph"; // 씬 그래프 생성 함수
 import generateUpdatedTextUsingAPI from "./action/generateUpdatedText";
-import {generateImage, editImageWithMask} from "./action/generateImage";
+import { generateImage, editImageWithMask } from "./action/generateImage";
+import {INIT_IMAGE, INIT_MASKS} from "./constant/initialConstants";
 
 // Reducer 함수 정의
 const graphChangesReducer = (state, action) => {
@@ -24,34 +25,61 @@ const App = () => {
   const [sceneGraph, setSceneGraph] = useState({
     // sceneGraph is in the form of a JSON object, with {"objects":["attributes"], "relationships"}
     objects: [
-      { id: "object1", name: "wolf" },
-      { id: "object2", name: "icecream", attributes: ["chocolate"] },
+      { id: "object1", name: "woman", attributes: ["standing"] },
+      { id: "object2", name: "park" },
+      { id: "object3", name: "dress", attributes: ["white"] },
     ],
     relationships: [
-      { source: "object1", target: "object2", relation: "holding" },
+      { source: "object1", target: "object2", relation: "in" },
+      { source: "object1", target: "object3", relation: "wearing" },
     ],
   });
   const [graphData, setGraphData] = useState({
     // graphData is in the form of a JSON object, with {"nodes", "links"}, to be easily used by the SceneGraph component
     nodes: [
-      { id: "object1", name: "wolf", type: "object" },
-      { id: "object2", name: "icecream", type: "object" },
-      { id: "object2-chocolate", name: "chocolate", type: "attribute" },
-      { id: "relationship0", name: "holding", type: "relationship" },
+      { id: "object1", name: "woman", type: "object" },
+      { id: "object2", name: "park", type: "object" },
+      { id: "object3", name: "dress", type: "object" },
+      { id: "object1-standing", name: "standing", type: "attribute" },
+      { id: "object3-white", name: "white", type: "attribute" },
+      { id: "relationship0", name: "in", type: "relationship" },
+      { id: "relationship1", name: "wearing", type: "relationship" },
     ],
     links: [
-      { source: "object1", target: "relationship0", relation: "holding" },
-      { source: "relationship0", target: "object2", relation: "holding" },
+      { source: "object1", target: "relationship0", relation: "in", index: 0 },
       {
-        source: "object2",
-        target: "object2-chocolate",
+        source: "object1",
+        target: "relationship1",
+        relation: "wearing",
+        index: 1,
+      },
+      { source: "relationship0", target: "object2", relation: "in", index: 2 },
+      {
+        source: "relationship1",
+        target: "object3",
+        relation: "wearing",
+        index: 3,
+      },
+      {
+        source: "object1",
+        target: "object1-standing",
         relation: "has attribute",
+        index: 4,
+      },
+      {
+        source: "object3",
+        target: "object3-white",
+        relation: "has attribute",
+        index: 5,
       },
     ],
   }); // 씬 그래프 데이터 상태
-  const [image, setImage] = useState(null);
-  const [masks, setMasks] = useState([]);
-  const [image_metadata, setImageMetadata] = useState(null);
+  const [image, setImage] = useState(INIT_IMAGE);
+  const [masks, setMasks] = useState(INIT_MASKS); 
+  const [image_metadata, setImageMetadata] = useState({
+    image_path: "./demo/images/20250217_115048_944691.png",
+    mask_path: "./demo/masks/20250217_115048_944691",
+  });
 
   const [inputText, setInputText] = useState("wolf holding chocolate icecream"); // 사용자 입력 상태
   const [loading, setLoading] = useState(false); // 로딩 상태 관리
@@ -71,10 +99,9 @@ const App = () => {
     console.log("sceneGraph ", sceneGraph);
   }, [sceneGraph]);
 
-  useEffect(()=>{
+  useEffect(() => {
     console.log("graphData ", graphData);
   }, [graphData]);
-
 
   // 모드 변경 함수
   const changeMode = (mode) => {
@@ -106,19 +133,27 @@ const App = () => {
       const newText = await generateUpdatedTextUsingAPI(sceneGraph, inputText);
 
       console.log("Updated Text in App.js:", newText);
-      setInputText(newText); 
+      setInputText(newText);
     } catch (error) {
       console.error("Error generating updated text:", error);
     }
     setLoading(false); // 로딩 종료
   };
 
-  const handleImageEditWithMask= async () => {
+  const handleImageEditWithMask = async () => {
     setLoading(true); // 로딩 시작
     try {
-      const result = await editImageWithMask(image_metadata, sceneGraph, graphChanges); // 이미지 생성
-      const metadata = {"original_sg": result["original_sg"], "image_path": result["image_path"], "mask_path": result["mask_path"]};
-      
+      const result = await editImageWithMask(
+        image_metadata,
+        sceneGraph,
+        graphChanges
+      ); // 이미지 생성
+      const metadata = {
+        original_sg: result["original_sg"],
+        image_path: result["image_path"],
+        mask_path: result["mask_path"],
+      };
+
       setImage(result["image"]);
       setMasks(result["masks"]);
       setImageMetadata(metadata);
@@ -134,7 +169,11 @@ const App = () => {
     setLoading(true);
     try {
       const result = await generateImage(sceneGraph);
-      const metadata = {"original_sg": result["original_sg"], "image_path": result["image_path"], "mask_path": result["mask_path"]};
+      const metadata = {
+        original_sg: result["original_sg"],
+        image_path: result["image_path"],
+        mask_path: result["mask_path"],
+      };
 
       setImage(result["image"]);
       setMasks(result["masks"]);
@@ -145,7 +184,7 @@ const App = () => {
       console.error("Error editing image with mask:", error);
     }
     setLoading(false);
-  }
+  };
 
   const handleSegmentClick = (index) => {
     console.log(`Clicked segment ${index}`);
@@ -217,10 +256,15 @@ const App = () => {
           <p>Enter a prompt to generate a scene graph.</p>
         )}
 
-        <ImageViewer 
+        <ImageViewer
           image={image}
           masks={masks}
           onSegmentClick={handleSegmentClick}
+          graphData={graphData}
+          setGraphData={setGraphData}
+          sceneGraph={sceneGraph}
+          setSceneGraph={setSceneGraph}
+          dispatch={dispatch}
         />
         {/* <div>
           {image && (
