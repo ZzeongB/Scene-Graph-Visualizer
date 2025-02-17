@@ -23,3 +23,15 @@ yarn-debug.log*
 yarn-error.log*
 
 .env
+
+# cache
+.cache/
+__pycache__/
+.idea/
+cache/
+demo/
+
+*.ckpt
+*.pt
+*.pth
+*.pkl
