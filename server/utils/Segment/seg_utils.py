@@ -150,7 +150,7 @@ def mask_to_normalized_bbox(mask):
 def initialize_sam_model(device):
     # Segment-Anything checkpoint
     SAM_ENCODER_VERSION = "vit_h"
-    SAM_CHECKPOINT_PATH = "checkpoints/sam_vit_h_4b8939.pth"
+    SAM_CHECKPOINT_PATH = "/content/drive/MyDrive/SG-server/sam_vit_h_4b8939.pth"
 
     # Building SAM Model and SAM Predictor
     sam = sam_model_registry[SAM_ENCODER_VERSION](checkpoint=SAM_CHECKPOINT_PATH)
@@ -164,11 +164,11 @@ def initialize_ground_sam_models(device):
     
     # GroundingDINO config and checkpoint
     GROUNDING_DINO_CONFIG_PATH = "utils/Segment/GroundingDINO_SwinT_OGC.py"
-    GROUNDING_DINO_CHECKPOINT_PATH = "./checkpoints/groundingdino_swint_ogc.pth"
+    GROUNDING_DINO_CHECKPOINT_PATH = "/content/drive/MyDrive/SG-server/groundingdino_swint_ogc.pth"
 
     # Segment-Anything checkpoint
     SAM_ENCODER_VERSION = "vit_h"
-    SAM_CHECKPOINT_PATH = "./checkpoints/sam_vit_h_4b8939.pth"
+    SAM_CHECKPOINT_PATH = "/content/drive/MyDrive/SG-server/sam_vit_h_4b8939.pth"
 
     # Building GroundingDINO inference model
     grounding_dino_model = Model(model_config_path=GROUNDING_DINO_CONFIG_PATH, model_checkpoint_path=GROUNDING_DINO_CHECKPOINT_PATH)
@@ -183,16 +183,23 @@ def construct_node_masks(image_path,  basic_SG=None, out_dir = "outputs"):
     input_image = Image.open(image_path)
     
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    import time
+    print("Initializing models...")
+    start = time.time()
     grounding_dino_model, sam_predictor = initialize_ground_sam_models(device)
+    print(f"Models initialized in {time.time()-start:.2f} seconds")
     
     # objects to detect
     objects_to_seg = basic_SG['objects']
     input_image = np.array(input_image)
     
     # initialize model
+    start = time.time()
+    print("Segmenting objects...")
     with torch.no_grad():
         masks, bboxes = ground_segment(grounding_dino_model, sam_predictor, input_image, objects_to_seg, box_threshold=0.25, text_threshold=0.25)
-
+    print(f"Objects segmented in {time.time()-start:.2f} seconds")
+    
     print("\tSegmentation complete")
     
     # save the input image

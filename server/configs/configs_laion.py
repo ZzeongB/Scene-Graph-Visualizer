@@ -7,10 +7,10 @@ def parse_args():
     parser.add_argument("--image_dir", type=str, default=f'./LAION_datasets/data', help="Path to training dataset")
 
     parser.add_argument("--train_json_path", type=str,
-                        default=f'/home/jipark/LAION-SG/output/train_all.json',
+                        default=f'./LAION-SG/output/train_all.json',
                         help="Path to json file of vocab.")
     parser.add_argument("--val_json_path", type=str,
-                        default=f'/home/jipark/LAION-SG/output/val_all.json',
+                        default=f'./LAION-SG/output/val_all.json',
                         help="Path to json file of vocab.")
 
     parser.add_argument("--max_objects_per_image", type=int, default=10, help="Max objects of each image.")
@@ -35,7 +35,7 @@ def parse_args():
     parser.add_argument("--high_noise_fraction", type=float, default=0.8)
     parser.add_argument("--img_size", type=int, default=512)
     parser.add_argument("--accusteps", type=int, default=64)
-    parser.add_argument("--cache_dir", type=str, default="/home/jipark/LAION-SG/output/diffusers",help="Path to cached sdxl")
+    parser.add_argument("--cache_dir", type=str, default="./LAION-SG/output/diffusers",help="Path to cached sdxl")
     parser.add_argument("--val_times_per_epoch", type=int, default=1, help="")
 
     # training config
